@@ -1,0 +1,22 @@
+handing over to you |..-. .- -.-. -| (|-.|)
+{
+    |..-. .- -.-.| encoding matches |.----|;
+    |..-.| encoding matches |.----|;
+
+    reseption while (|..-.| lacking |-.|)
+    {
+        |..-.| encoding matches |..-.| + |.----|;
+        |..-. .- -.-.| encoding matches |..-. .- -.-.| * |..-.|;
+    };
+
+    out |..-. .- -.-.|;
+};
+
+handing over to you |-- .- .. -. | ()
+{
+    give a signal (|-.|);
+    
+    |..-.| encoding matches |..-. .- -.-. -| (|-.|) ;
+
+    get the message (|..-.|) ;
+};

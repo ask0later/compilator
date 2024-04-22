@@ -1,0 +1,1 @@
+(func_0(var_0)( ; ( = (var_1)(1))( ; ( = (var_2)(1))( ; ( while ( < (var_2)(var_0))( ; ( = (var_2)( + (var_2)(1)))( ; ( = (var_1)( * (var_1)(var_2))))))( return (var_1))))))(func_1( ; ( input (var_3))( ; ( = (var_4)(func_0(var_3)))( ; ( output (var_4))))))

@@ -1,0 +1,79 @@
+handing over to you |.-.. .. -. . | (|-...| , |-.-.|)
+{
+    |-.--| encoding matches |-----| - |-.-.| / |-...| ;
+    out |-.--| ;
+}
+
+handing over to you |-.. .. ... -.-. .-.| (|.-| , |-...| , |-.-.|)
+{
+    |-..| encoding matches ((|-...| * |-...|) - (|....-| * |.-| * |-.-.|)) ;
+    out |-..|;
+}
+
+handing over to you |..-. .-. --- --- - | (|.-| , |-...|, |-..|)
+{
+    |-.--| encoding matches (((|-----| - |-...|) + (sqrt(|-..|))) / (|..---| * |.-|));
+    out |-.--| ;
+}
+
+handing over to you |... .-. --- --- -| (|.-| , |-...|, |-..|)
+{
+    |-.--| encoding matches (((|-----| - |-...|) - (sqrt(|-..|))) / (|..---| * |.-|));
+    out |-.--| ;
+}
+
+handing over to you |-- .- .. -. | ()
+{
+    give a signal (|.-|);
+    give a signal (|-...|);
+    give a signal (|-.-.|);
+    
+    reseption if (|.-| match |-----|)
+    {
+        reseption if (|-...| match |-----|)
+        {
+            reseption if (|-.-.| match |-----|)
+            {
+                |-.--| encoding matches |.---- .---- .----|;
+                get the message (|-.--|);
+            };
+
+            reseption if (|-.-.| diverse |-----|)
+            {
+                |-.--| encoding matches |..--- ..--- ..---| ;
+                get the message (|-.--|) ;
+            };
+        };
+
+        reseption if (|-...| diverse |-----|)
+        {
+            |-.--| encoding matches |.-.. .. -. .| (|-...| , |-.-.|) ;
+            get the message (|-.--|) ;
+        };
+    };
+
+    reseption if (|.-| diverse |-----|)
+    {
+        |-..| encoding matches |-.. .. ... -.-. .-.| (|.-| , |-...| , |-.-.|) ;
+        
+        reseption if (|-..| match |-----|)
+        {
+            |-.--| encoding matches ((|-----| - |-...|) / (|..---| * |.-|));
+            get the message (|-.--|) ;
+        };
+
+        reseption if (|-..| overflow |-----|)
+        {
+            |-.-- .----| encoding matches |..-. .-. --- --- - | (|.-| , |-...|, |-..|);
+            get the message (|-.-- .----|);
+            |-.-- ..---| encoding matches |... .-. --- --- -| (|.-| , |-...|, |-..|) ;
+            get the message (|-.-- ..---|);
+        };
+        
+        reseption if (|-..| lacking |-----|)
+        {
+            |-.--| encoding matches |..--- ..--- ..---|;
+            get the message (|-.--|);
+        };
+    };
+}

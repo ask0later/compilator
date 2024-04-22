@@ -1,0 +1,1 @@
+(func_0(var_0)( ; ( if ( == (var_0)(0))( return (1)))( ; ( if ( == (var_0)(1))( return (1)))( return ( * (var_0)(func_0( - (var_0)(1))))))))(func_1( ; ( input (var_1))( ; ( = (var_2)(func_0(var_1)))( ; ( output (var_2))))))

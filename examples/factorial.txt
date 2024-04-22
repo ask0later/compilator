@@ -1,0 +1,24 @@
+handing over to you |..-. .- -.-. -| (|-.|)
+{
+    reseption if (|-.| match |-----|)
+    {
+        out |.----|;
+    };
+
+    reseption if (|-.| match |.----|)
+    {
+        out |.----|;
+    };
+
+    out |-.| * |..-. .- -.-. -| (|-.| - |.----|) ;
+}
+
+
+handing over to you |-- .- .. -. | ()
+{
+    give a signal (|-.|);
+    
+    |..-.| encoding matches |..-. .- -.-. -| (|-.|) ;
+
+    get the message (|..-.|) ;
+}
