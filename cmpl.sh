@@ -1,7 +1,6 @@
 cd front/
-./lan ../examples/$1.txt ../examples/tree.txt
+./lan ../examples/$1.txt ../examples/tree_$1.txt
 cd .. && cd middle
-./mid ../examples/tree.txt
 cd .. && cd back
-./back ../examples/tree.txt ../examples/$1.asm
+./back ../examples/tree_$1.txt ../examples/$1.asm
 cd ..

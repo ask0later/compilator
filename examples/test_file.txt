@@ -1,0 +1,24 @@
+handing over to you |.-.. .. -. .| (|-...| , |-.-.|)
+{
+    |-.--| encoding matches |-----| - |-.-.| / |-...| ;
+    out |-.--| ;
+}
+
+handing over to you |-- .- .. -. | ()
+{
+    give a signal (|.-|);
+    give a signal (|-...|);
+    
+    reseption if (|.-| match |-----|)
+    {
+        |.-| encoding matches ((|-...| * |-...|) - (|.-| * |.-|));
+
+        reseption if (|-...| diverse |-----|)
+        {
+            |-.--| encoding matches |.-.. .. -. .| (|-...| , |-...|);
+            get the message (|-.--|) ;
+        };
+    };
+
+    get the message (|-.--|);
+}

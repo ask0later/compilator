@@ -1,0 +1,1 @@
+(func_0( , (var_0)(var_1))( ; ( =  (var_2)( - (0)( / (var_1)(var_0))))( return (var_2))))(func_1( ; ( input (var_3))( ; ( input (var_4))( ; ( if ( == (var_3)(0))( ; ( =  (var_3)( - ( * (var_4)(var_4))( * (var_3)(var_3))))( ; ( if ( != (var_4)(0))( ; ( =  (var_5)(func_0( , (var_4)(var_4))))( ; ( output (var_5))))))))( ; ( output (var_5)))))))

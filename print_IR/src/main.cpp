@@ -1,11 +1,13 @@
+#include "error_allocator.h"
 #include "read_file.h"
 #include "tree.h"
 #include "graphic.h"
 #include "read_tree.h"
-#include "simple.h"
 #include "print_tree.h"
-#include "printlang.h"
-#include "error_allocator.h"
+
+
+#include "print_IR.h"
+#include "print_nasm.h"
 
 
 int main(const int argc, const char* argv[])
@@ -37,7 +39,6 @@ int main(const int argc, const char* argv[])
     CreateTree(&buf, trees, &trees_num, &err_alloc);
     if (err_alloc.need_call == true)
     {
-        printf("AAA\n");
         INSERT_ERROR_NODE(&err_alloc, "invalid executing CreateTree");
         ERR_ALLOC_TERMINATE(&err_alloc);
         DestructorTrees(trees, trees_num);
@@ -45,37 +46,24 @@ int main(const int argc, const char* argv[])
         return 1;
     }
 
-    SimplificationTrees(trees, trees_num);
-
     GraphicDump(trees_num, trees[0], trees[1], trees[2], trees[3], trees[4]);
-    
-    FILE* output = fopen(tree_file, "w");
-    if (!output)
-    {
-        INSERT_ERROR_NODE(&err_alloc, "file failed to open");
-        ERR_ALLOC_TERMINATE(&err_alloc);
-        DestructorTrees(trees, trees_num);
-        DtorBuffer(&buf);
-        return 1;
-    }
 
-    PrintTrees(trees, trees_num, output);
-    fclose(output);
 
-    FILE* To = fopen("../examples/retranclate.txt", "w");
-    if (!To)
-    {
-        INSERT_ERROR_NODE(&err_alloc, "file failed to open");
-        ERR_ALLOC_TERMINATE(&err_alloc);
-        DestructorTrees(trees, trees_num);
-        DtorBuffer(&buf);
-        return 1;
-    }
+    Instruction* instrs = {};
+    CtorInstructions(&instrs, &err_alloc);
 
-    Retranslate(trees, trees_num, To);
-    fclose(To);
-    
+    CompleteInstructions(&instrs, trees, &err_alloc);
+    PrintInstructions(instrs);
+
+    IR_Function* funcs = NULL;
+
+    CtorIR(&funcs, &err_alloc);
+    ConvertIR(funcs, trees, &err_alloc);
+    DumpIR(funcs);
+    DtorIR(funcs);
+
     DtorErrorAllocator(&err_alloc);
     DestructorTrees(trees, trees_num);
     DtorBuffer(&buf);
+    DtorInstructions(&instrs);
 }

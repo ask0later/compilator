@@ -1,4 +1,4 @@
-TARGET = mid
+TARGET = ir
 CC = g++
 CFLAGS = -D _DEBUG -ggdb3 -O3 -std=c++17 -O0 -Wall -Wextra -Weffc++ -Waggressive-loop-optimizations -Wc++14-compat -Wmissing-declarations \
 -Wcast-align -Wcast-qual -Wchar-subscripts -Wconditionally-supported -Wconversion -Wctor-dtor-privacy -Wempty-body -Wfloat-equal -Wformat-nonliteral \
@@ -42,3 +42,4 @@ $(OBJ_FOLDER)%.o : $(SRC_FOLDER)%.cpp
 
 clean:
 	rm $(TARGET) $(OBJ)
+

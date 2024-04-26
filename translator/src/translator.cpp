@@ -4,6 +4,363 @@
 #include <elf.h>
 
 
+int TranslateToELF(Text* elf_buf, err_allocator* err_alloc)
+{
+        Text start_bin = {};
+        Text converted_bin = {};
+
+        CtorBuffer(&start_bin, "binary", err_alloc);
+        CtorEmptyBuffer(&converted_bin, start_bin.size_buffer * 2, err_alloc);
+        ConvertBinary(&start_bin, &converted_bin);
+        DtorBuffer(&start_bin);
+
+
+        CompleteElfHeader(elf_buf);
+        CompleteProgramHeaderTable(elf_buf);
+        
+        
+        
+        CompleteText(elf_buf, &converted_bin);
+        // CompleteData(elf_buf);
+
+        ReallocateBuffer(elf_buf, elf_buf->position, err_alloc);
+
+        return 0;
+}
+
+int ConvertBinary(Text* start_bin, Text* converted_bin)
+{
+        while (start_bin->position != start_bin->size_buffer)
+        {
+                ParseInstuction(start_bin, converted_bin);
+        }
+
+        return 0;
+}
+
+// int DecToHex(char* number)
+// {
+//         size_t i = 0;
+//         char hex_number[20] = {};
+
+//         while (number[i] != '\0')
+//         {
+//                 hex_number
+
+
+//                 i++;
+//         }
+
+// }
+
+// int ParseInstuction(Text* start_bin, Text* converted_bin)
+// {
+//         switch(start_bin->str[start_bin->position] & 0b00011111)
+//         {       
+//                 const unsigned char NUM_BIT      =  1 << 5;
+//                 const unsigned char REG_BIT      =  1 << 6;
+//                 const unsigned char RAM_BIT      =  1 << 7;
+
+//                 int argument = 0;
+
+//                 start_bin->position++;
+//                 case PUSH:
+//                         if (start_bin->str[start_bin->position - 1] & 1 << 5)
+//                         {
+//                                 converted_bin->str[converted_bin->position] = 0x68;
+//                                 converted_bin->position++;
+
+//                                 memcpy(converted_bin->str + converted_bin->position, start_bin->str + start_bin->position, sizeof(int));
+//                                 converted_bin->position += sizeof(int);
+//                         }
+//                         else if (start_bin->str[start_bin->position - 1] & 1 << 6)
+//                         {
+//                                 converted_bin->str[converted_bin->position] = 0x50;
+//                                 converted_bin->str[converted_bin->position] += (start_bin->str[start_bin->position] - 1);
+                                
+//                                 converted_bin->position++;
+//                         }
+
+//                         if (start_bin->str[start_bin->position - 1] & 1 << 7)
+//                         {
+//                                 value1 = spu->RAM[argument];
+//                         }
+//                         else
+//                         {
+//                                 value1 = argument;
+//                         }
+
+//                         if (start_bin->str[start_bin->position - 1] & NUM_BIT)
+//                                 cmd->position += sizeof(int);
+//                         else
+//                                 cmd->position += sizeof(char);
+
+//                         StackPush(value1, &(spu->stk));
+
+//                         break;
+//                 case POP:
+//                         value1 = StackPop(&(spu->stk));
+                        
+//                         if (start_bin->str[start_bin->position - 1] & NUM_BIT)
+//                         {
+//                                 memcpy(&argument, (int*)(cmd->buffer + cmd->position), sizeof(int));
+//                                 cmd->position += sizeof(int);
+//                                 spu->RAM[argument] = value1;
+//                         }
+//                         else if (start_bin->str[start_bin->position - 1] & RAM_BIT)
+//                         {
+//                                 argument = spu->reg[(size_t) cmd->buffer[cmd->position] - 1];
+//                                 cmd->position += sizeof(char);
+                                
+//                                 spu->RAM[argument] = value1;
+//                         }
+//                         else
+//                         {
+//                                 spu->reg[(size_t) cmd->buffer[cmd->position] - 1] = value1;
+//                                 cmd->position += sizeof(char);
+//                         }
+
+//                         break;
+//                 case ADD:
+
+//                         break;
+//                 case SUB:
+
+//                         break;
+//                 case MUL:
+
+//                         break;
+//                 case DIV:
+
+//                         break; 
+//                 case SQRT:
+
+//                         break;
+//                 case SIN:
+
+//                         break;
+//                 case COS:
+
+//                         break;
+//                 case IN:
+
+//                         break;
+//                 case JA:
+
+//                         break;
+//                 case JAE:
+
+//                         break;
+//                 case JB:
+
+//                         break;
+//                 case JBE:
+
+//                         break;
+//                 case JE:
+
+//                         break;
+//                 case JNE:
+
+//                         break;
+//                 case JMP:
+
+//                         break;
+//                 case CALL:
+
+//                         break;
+//                 case RETURN:
+
+//                         break; 
+//                 case OUT:
+
+//                         break;
+//                 case HTL:
+
+//                         break;
+
+//                 default:
+//                         /*error*/
+//                         printf("extra instruction");
+//                         break;
+
+//         }
+// }
+
+
+
+// PUSH
+// {
+//             cmd->position++;
+//             if (cmd->buffer[cmd->position - 1] & NUM_BIT)
+//             {
+//                 memcpy(&argument, (int*)(cmd->buffer + cmd->position), sizeof(int));
+//             }
+//             else if (cmd->buffer[cmd->position - 1] & REG_BIT)
+//             {
+//                 argument = spu->reg[(size_t) cmd->buffer[cmd->position] - 1];    
+//             }
+//             if (cmd->buffer[cmd->position - 1] & RAM_BIT)
+//             {
+//                 value1 = spu->RAM[argument];
+//             }
+//             else
+//             {
+//                 value1 = argument;
+//             }
+//             if (cmd->buffer[cmd->position - 1] & NUM_BIT)
+//                 cmd->position += sizeof(int);
+//             else
+//                 cmd->position += sizeof(char);
+
+//             StackPush(value1, &(spu->stk));
+// }
+
+// POP
+// {
+//             cmd->position++;
+//             value1 = StackPop(&(spu->stk));
+        
+//             if (cmd->buffer[cmd->position - 1] & NUM_BIT)
+//             {
+//                 memcpy(&argument, (int*)(cmd->buffer + cmd->position), sizeof(int));
+//                 cmd->position += sizeof(int);
+//                 spu->RAM[argument] = value1;
+//             }
+//             else if (cmd->buffer[cmd->position - 1] & RAM_BIT)
+//             {
+//                 argument = spu->reg[(size_t) cmd->buffer[cmd->position] - 1];
+//                 cmd->position += sizeof(char);
+                
+//                 spu->RAM[argument] = value1;
+//             }
+//             else
+//             {
+//                 spu->reg[(size_t) cmd->buffer[cmd->position] - 1] = value1;
+//                 cmd->position += sizeof(char);
+//             }
+// }
+
+
+// DEF_CMD("add", ADD, NO_ARGUMENTS,
+// {         
+//                 cmd->position++;
+//                 value1 = StackPop(&(spu->stk));                                                  
+//                 value2 = StackPop(&(spu->stk));                                                  
+//                 StackPush(value2 + value1, &(spu->stk));  
+// }
+// )
+
+// DEF_CMD("sub", SUB, NO_ARGUMENTS,
+// {
+//             cmd->position++;
+//             ARIFMETIC_OPERATION(-)
+// }
+// )
+
+// DEF_CMD("mul", MUL, NO_ARGUMENTS,
+// {
+//             cmd->position++;
+//             ARIFMETIC_OPERATION(*)
+// }
+// )
+
+
+// DEF_CMD("div", DIV, NO_ARGUMENTS,
+// {
+//             cmd->position++;
+//             ARIFMETIC_OPERATION(/)
+// }
+// )
+
+
+// DEF_CMD("sqrt", SQRT, NO_ARGUMENTS,
+// {
+//             cmd->position++;
+//             value1 = 100 * StackPop(&(spu->stk));
+//             value1 =(int) sqrt((double) value1) / 10;
+//             StackPush(value1, &(spu->stk));
+// }
+// )
+
+// DEF_CMD("sin", SIN, NO_ARGUMENTS,
+// {
+//             cmd->position++;
+//             value1 = StackPop(&(spu->stk));
+//             value1 = (int) sin((double) value1);
+//             StackPush(value1, &(spu->stk));
+// }
+// )
+
+
+// DEF_CMD("cos", COS, NO_ARGUMENTS, 
+// {
+//             cmd->position++;
+//             value1 = StackPop(&(spu->stk));
+//             value1 = (int) cos((double) value1);
+//             StackPush(value1, &(spu->stk));
+// }
+// )
+
+// DEF_CMD("in", IN, NO_ARGUMENTS, 
+// {
+//             cmd->position++;
+//             scanf("%d", &argument);
+//             StackPush(argument, &(spu->stk));
+// }
+// )
+
+// DEF_CMD("ja",  JA,  LABEL_ARGUMENTS, 
+// {
+//                 value1 = StackPop(&(spu->stk));                                                  \
+//                 value2 = StackPop(&(spu->stk));                                                  \
+//                 if (value2 > value1)                                                        \
+//                 {                                                                                \
+//                         memcpy(&argument, (int*)(cmd->buffer + cmd->position + 1), sizeof(int));     \
+//                         value3 = (int) cmd->position;                                                \
+//                         cmd->position = (size_t)(value3 - argument);                                 \
+//                 }                                                                                \
+//                 else                                                                             \
+//                         cmd->position += sizeof(int) + sizeof(char);                                 \
+// })       
+
+
+// DEF_CMD("jmp", JMP, LABEL_ARGUMENTS,
+// {
+//             memcpy(&argument, (int*)(cmd->buffer + cmd->position + 1), sizeof(int));
+//             value3 = (int) cmd->position;
+//             cmd->position = (size_t)(value3 - argument);
+// }
+// )
+
+// DEF_CMD("call", CALL, LABEL_ARGUMENTS,
+// {
+//             memcpy(&argument, (int*)(cmd->buffer + cmd->position + 1), sizeof(int));
+//             value3 = (int)  cmd->position;
+//             value1 = (int) (cmd->position + sizeof(char) + sizeof(int));
+            
+//             StackPush(value1, &(spu->adress));
+//             cmd->position = (size_t)(value3 - argument);
+// }
+// )
+
+// DEF_CMD("ret", RET, NO_ARGUMENTS,
+// {
+//             value1 = StackPop(&(spu->adress));
+//             cmd->position = (size_t) value1;
+// }
+// )
+
+// DEF_CMD("out", OUT, NO_ARGUMENTS,
+// {
+//             cmd->position++;
+//             value1 = StackPop(&(spu->stk));
+//             printf("|%2d|\n", value1);
+// }
+
+
+
+
 int CompleteElfHeader(Text* elf_buf)
 {
         // typedef struct {
@@ -56,13 +413,6 @@ int CompleteElfHeader(Text* elf_buf)
         return 0;
 }
 
-
-
-// 00 00 00 00 00 00 00 00 00 00 00 00
-        
-
-
-
 int CompleteProgramHeaderTable(Text* elf_buf, Text* bin)
 {
         // typedef struct
@@ -107,25 +457,6 @@ int CompleteProgramHeaderTable(Text* elf_buf, Text* bin)
         // memcpy(buffer->str + buffer->position, &data_prog_header, sizeof(data_prog_header));
         // buffer->position += sizeof(data_prog_header);
         
-        return 0;
-}
-
-int TranslateToELF(Text* elf_buf, Tree** tree, err_allocator* err_alloc)
-{
-
-        CompleteElfHeader(elf_buf);
-        CompleteProgramHeaderTable(elf_buf);
-        
-        Text binary = {};
-        CtorBuffer(&binary, "binary", err_alloc);
-        
-        CompleteText(elf_buf, NULL);
-        CompleteData(elf_buf);
-
-        ReallocateBuffer(elf_buf, elf_buf->position, err_alloc);
-
-        DtorBuffer(&binary);
-
         return 0;
 }
 
@@ -201,18 +532,8 @@ int CompleteData(Text* buffer)
 
 
 
-int Verificator(Text* buffer, Tree** tree, err_allocator* err_alloc)
+int Verificator(Text* elf_buf, err_allocator* err_alloc)
 {
-        if (buffer->str[0] != 0)
-                //error
-
-        if (buffer->str[1] != 0)
-                //error
-
-        if (buffer->str[2] != 0)
-                //error
-
-
         // buffer->str[0] = 0x7c;
         // buffer->str[1] = 0x45;
         // buffer->str[2] = 0x4c;
