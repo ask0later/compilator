@@ -37,7 +37,6 @@ int main(const int argc, const char* argv[])
     // CreateTree(&buf, trees, &trees_num, &err_alloc);
     // if (err_alloc.need_call == true)
     // {
-    //     printf("AAA\n");
     //     INSERT_ERROR_NODE(&err_alloc, "invalid executing CreateTree");
     //     ERR_ALLOC_TERMINATE(&err_alloc);
     //     DestructorTrees(trees, trees_num);

@@ -1,5 +1,5 @@
-#ifndef PRINT_NASM_lib
-#define PRINT_NASM_lib
+#ifndef AST_TO_NASM_lib
+#define AST_TO_NASM_lib
 
 #include "error_allocator.h"
 #include "tree.h"

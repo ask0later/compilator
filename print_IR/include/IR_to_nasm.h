@@ -2,16 +2,38 @@
 #define IR_TO_NASMlib
 
 #include "error_allocator.h"
-#include "print_IR.h"
+#include "AST_to_IR.h"
 
 
-int PrintIRtoNasm(IR_node* ir_nodes, size_t* index_node, err_allocator* err_alloc);
+const char* const temp_registers[] = {"r11", "r12", "r13", "r14"};
+const char* const nasm_instrs[] = {"nop",
+                                   "mov",
+                                   "add",
+                                   "sub",
+                                   "mul",
+                                   "div",
+                                   "push",
+                                   "pop",
+                                   "jmp",
+                                   "je",
+                                   "jne",
+                                   "jae",
+                                   "jbe",
+                                   "cmp",
+                                   "",
+                                   "call",
+                                   "ret",
+                                   "",
+                                   "",
+                                   ""};
 
-int ParseInstruction(IR_node ir_nodes);
+int PrintIRtoNasm(FILE* To, IR_Function* funcs);
 
+int PrintIRFunction(FILE* To, IR_Function* funcs);
+int PrintIRInstruction(FILE* To, IR_node* ir_nodes);
+int PrintIRArgument(FILE* To, IR_type type, IR_data* data);
 
-
-
-
+int PrintInOutLib(FILE* To);
+int PrintExit(FILE* To);
 
 #endif
