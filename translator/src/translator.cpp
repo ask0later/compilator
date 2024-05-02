@@ -442,20 +442,20 @@ int CompleteProgramHeaderTable(Text* elf_buf, Text* bin)
         memcpy(elf_buf->str + elf_buf->position, &text_prog_header, sizeof(text_prog_header));
         elf_buf->position += sizeof(text_prog_header);
 
-        // Elf64_Phdr data_prog_header  = {};
+        Elf64_Phdr data_prog_header  = {};
 
-        // data_prog_header.p_type      = PT_LOAD;
-        // data_prog_header.p_offset    = 0x;                    // смещение от начала файла
-        // data_prog_header.p_vaddr     = 0x**800408;              // виртуальный адрес
-        // data_prog_header.p_paddr     = 0;                       // физический адрес
-        // data_prog_header.p_filesz    = 0x;                    // количество байтов в образе файла сегмента
-        // data_prog_header.p_memsz     = 0x;                    // количество байтов в памяти образа сегмента
-        // data_prog_header.p_flags     = PF_R | PF_X | PF_W;      // PF_R = READ - 0x04, PF_W = WRITE - 0x02, PF_X = EXEC - 0x01
-        // data_prog_header.p_align     = 0x200000;                // выравнивание
+        data_prog_header.p_type      = PT_LOAD;
+        data_prog_header.p_offset    = 0x;                    // смещение от начала файла
+        data_prog_header.p_vaddr     = 0x**800408;              // виртуальный адрес
+        data_prog_header.p_paddr     = 0;                       // физический адрес
+        data_prog_header.p_filesz    = 0x;                    // количество байтов в образе файла сегмента
+        data_prog_header.p_memsz     = 0x;                    // количество байтов в памяти образа сегмента
+        data_prog_header.p_flags     = PF_R | PF_X | PF_W;      // PF_R = READ - 0x04, PF_W = WRITE - 0x02, PF_X = EXEC - 0x01
+        data_prog_header.p_align     = 0x200000;                // выравнивание
 
 
-        // memcpy(buffer->str + buffer->position, &data_prog_header, sizeof(data_prog_header));
-        // buffer->position += sizeof(data_prog_header);
+        memcpy(buffer->str + buffer->position, &data_prog_header, sizeof(data_prog_header));
+        buffer->position += sizeof(data_prog_header);
         
         return 0;
 }

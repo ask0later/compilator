@@ -28,7 +28,7 @@ int PrintIRtoNasm(FILE* To, IR_Function* funcs)
         
         fprintf(To, "section .data\n");
         fprintf(To, "BUF_PTR db 50 dup 0 \n");
-        fprintf(To, "RAM_PTR db 50 dup 0 \n");
+        fprintf(To, "RAM_PTR db 300 dup 0 \n");
 
         return 0;
 }
@@ -135,6 +135,9 @@ int PrintInOutLib(FILE* To)
                                 "push r11\n"
                                 "mov rsi, 10\n"
                                 "mov r11, 49\n"
+                                "mov dl, 0xa\n"
+                                "mov byte [BUF_PTR + r11], dl\n"
+                                "dec r11\n"
                                 ".loop:\n"
                                         "xor rdx, rdx\n"
                                         "div rsi\n"
@@ -147,6 +150,7 @@ int PrintInOutLib(FILE* To)
                                 "mov rdi, 1\n"
                                 "mov rdx, 50\n"
                                 "sub rdx, r11\n"
+                                "inc r11\n"
                                 "mov rsi, BUF_PTR\n" 
                                 "add rsi, r11\n"
                                 "syscall\n"
@@ -162,7 +166,7 @@ int PrintInOutLib(FILE* To)
 
 int PrintExit(FILE* To)
 {
-        fprintf(To, "program_exit:");
+        fprintf(To, "program_exit:\n");
         fprintf(To, "mov rax, 0x3c\n");
         fprintf(To, "mov rdi, 1\n");
         fprintf(To, "syscall\n");

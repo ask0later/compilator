@@ -10,6 +10,8 @@
 #include "IR_to_nasm.h"
 #include "AST_to_nasm.h"
 
+// ./ir ../examples/tree_factorial.txt nasm_file.asm
+
 int main(const int argc, const char* argv[])
 {
     if (argc != 3)

@@ -1,4 +1,5 @@
 #include "AST_to_IR.h"
+#include "error_allocator.h"
 #include "read_file.h"
 #include "tree.h"
 #include <cstddef>
@@ -69,63 +70,238 @@ int InsertIRnode(IR_node* ir_nodes, IR_Instruction instr_id, IR_type type_1, int
         if (name_2)
                 memcpy(ir_nodes->arg_2.name, name_2, strlen(name_2));
 
+        InsertOpcode(ir_nodes);
+
+        ir_nodes->offset += (ir_nodes - 1)->x64_instr_size + (ir_nodes - 1)->offset;
+
         return 0;
 }
+
+int InsertOpcode(IR_node* node)
+{
+        bool match = true;
+        for (size_t instr_index = 0; instr_index < sizeof(table) / sizeof(IR_to_opcode); instr_index++)
+        {
+                if (node->instr == table[instr_index].ir_instr)
+                {
+                        const args_and_opcode* data_table = (const args_and_opcode*) table[instr_index].data;
+
+                        for (size_t data_index = 0; data_index < sizeof(table[instr_index].data) / sizeof(args_and_opcode); data_index++)
+                        {
+                                match = true;
+                                
+                                match &= data_table[data_index].type_1 == node->type_1;                                
+                                match &= data_table[data_index].type_2 == node->type_2;
+                                
+                                if (node->type_1 != NUM_ARG && node->type_1 != LABEL_ARG)
+                                        match &= data_table[data_index].arg_1  == node->arg_1.value;
+                                
+                                match &= data_table[data_index].arg_2  == node->arg_2.value;
+
+                                if (match)
+                                {
+                                        node->x64_instr_size = (unsigned short) strlen((const char*) data_table[data_index].opcode);
+                                        memcpy(node->x64_instr, data_table[data_index].opcode, node->x64_instr_size);
+                                        break;
+                                }
+                        }
+                        break;
+                }
+        }
+
+        if (match == false)
+        {
+                /*dont forget labels*/
+                /*error*/
+        }
+
+        if (node->instr == IR_PUSH && node->type_1 == NUM_ARG)
+        {
+                int dec_number = node->arg_1.value;
+                unsigned char hex_number[sizeof(int)] = {};
+                
+                ConvertToHex(dec_number, (unsigned char*) hex_number);
+
+                size_t offset = node->x64_instr_size - sizeof(int);
+                memcpy(node->x64_instr + offset, hex_number, sizeof(int));
+        }
+
+        return 0;
+}
+
+int ConvertToHex(int dec_number, unsigned char* hex_number)
+{
+        for (size_t digit_index = 0; digit_index < sizeof(int); digit_index++)
+        {       
+                hex_number[digit_index] = dec_number & 0xFF;
+                dec_number = dec_number >> 8;
+        }
+
+        return 0;
+}
+
+int PatchIR(IR_Function* funcs, err_allocator* err_alloc)
+{
+        Label func_labels[MAX_FUNC_NUM] = {};
+
+        size_t func_num = 0;
+        size_t func_offset = 0;
+        for (; func_num < MAX_FUNC_NUM && funcs[func_num].size != 0; func_num++)
+        {
+                Label* start_label = funcs[func_num].label;
+                printf("f %s\n", start_label->label_name);
+                strcpy(func_labels[func_num].label_name, start_label->label_name);
+                printf("s %s\n", func_labels[func_num].label_name);
+                func_labels[func_num].offset = start_label->offset + func_offset;
+                func_offset += funcs[func_num].func_offset;
+        }
+
+        for (size_t func_index = 0; func_index < func_num; func_index++)
+        {
+                PatchJumps(funcs + func_index, func_labels, func_num);
+        }
+
+        return 0;
+}
+
+int PatchJumps(IR_Function* func, Label* func_labels, size_t func_num)
+{
+        printf("%s\n", func_labels[0].label_name);
+        printf("%s\n", func_labels[1].label_name);
+
+        for (size_t instr_index = 0; instr_index < func->size; instr_index++)
+        {
+                IR_node* node = func->instrs + instr_index;
+                
+                size_t offset = 0;
+                offset += GetOffsetConditionalJumps(node, func);
+                offset += GetOffsetGlobalCalls(node, func_labels, func_num);
+
+                if (offset != 0)
+                {
+                        puts("ура\n");
+                        unsigned char hex_number[sizeof(int)] = {};
+                        ConvertToHex((int) offset, hex_number);
+                        size_t offset_index = node->x64_instr_size - sizeof(int);
+
+                        memcpy(node->x64_instr + offset_index, hex_number, sizeof(int));
+                }
+        }
+
+        return 0;
+}
+
+size_t GetOffsetConditionalJumps(IR_node* node, IR_Function* func)
+{
+        if (node->instr == IR_JE || node->instr == IR_JNE || node->instr == IR_JAE || node->instr == IR_JBE || node->instr == IR_JMP)
+        {
+                for (size_t label_index = 0; label_index < func->label_num; label_index++)
+                {
+                        if (strcmp(func->label[label_index].label_name, node->arg_1.name) == 0)
+                        {
+                                size_t offset = func->label[label_index].offset - (node->offset + node->x64_instr_size);
+                                return offset;
+                        }
+                }
+                /*error*/
+        }
+
+        return 0;
+}
+
+size_t GetOffsetGlobalCalls(IR_node* node, Label* func_labels, size_t func_num)
+{
+        if (node->instr == IR_CALL)
+        {
+                for (size_t func_index = 0; func_index < func_num; func_index++)
+                {
+                        // my_input my_output
+                        if (strcmp(node->arg_1.name, func_labels[func_index].label_name) == 0)
+                        {
+                                size_t offset = func_labels[func_index].offset - (node->offset + node->x64_instr_size);
+                                return offset;
+                        }
+                }
+                /*error*/
+        }
+
+        return 0;
+}
+
 
 int ConvertIR(IR_Function* funcs, Tree** trees, err_allocator* err_alloc)
 {
         for (size_t func_index = 0; func_index < NUM_TREE && trees[func_index] != NULL; func_index++)
         {
                 CompleteFunctionIR(funcs + func_index, trees[func_index]->root, err_alloc);
-                funcs[func_index].size = funcs[func_index].position;
+                if (err_alloc->need_call == true)
+                {
+                        INSERT_ERROR_NODE(err_alloc, "invalid executing CompleteFunctionIR");
+                        return 1;
+                }
+                size_t pos = funcs[func_index].position;
+                IR_node* last_instr = &(funcs[func_index].instrs[pos]);
+
+                funcs[func_index].func_offset = last_instr->offset + last_instr->x64_instr_size;
+                funcs[func_index].size = pos;
                 funcs[func_index].position = 0;
         }
+
+        PatchIR(funcs, err_alloc);
+
         return 0;
+
 }
 
 int CompleteFunctionIR(IR_Function* funcs, Node* node, err_allocator* err_alloc)
 {
+        funcs->instrs[funcs->position].instr = IR_NOP;
+        funcs->instrs[funcs->position].x64_instr[0] = 0x90;
+        funcs->instrs[funcs->position].x64_instr_size = 1;
+        funcs->position++;
+
         if (node->type == FUNCTION)
         {
                 char buf[BUFFER_SIZE] = {};
                 int id_fun = (int) node->data.id_fun;
                 sprintf(buf, "func_%d", id_fun);
+
                 InsertIRnode(funcs->instrs + funcs->position, IR_DEFINE, LABEL_ARG, id_fun, buf, NO_ARG, 0, NULL);
+                
+                memcpy(funcs->label[funcs->label_num].label_name, buf, strlen(buf));
+                funcs->label[funcs->label_num].offset = funcs->instrs[funcs->position].offset;
+                funcs->label_num++;
+
                 funcs->position++;
 
-                if (node->right == NULL)
-                {
-                        CompleteOperatorsIR(funcs, node->left);
-                }
+                if (!node->right)
+                        CompleteOperatorsIR(funcs, node->left, err_alloc);
                 else
-                {       
-                        //CompletePopArgumentsIR(funcs, node->left);
-                        CompleteOperatorsIR(funcs, node->right);
-                }
+                        CompleteOperatorsIR(funcs, node->right, err_alloc);
         }
 
         return 0;
 }
 
-int CompletePopArgumentsIR(IR_Function* funcs, Node* node)
-{
-        if (!node) {return 0;}
+// int CompletePopArgumentsIR(IR_Function* funcs, Node* node)
+// {
+//         if (!node) {return 0;}
 
-        if (node->type == VARIABLE)
-        {
-                InsertIRnode(funcs->instrs + funcs->position, IR_POP, VAR_ARG, (int) node->data.id_var, NULL, NO_ARG, 0, NULL);
-                funcs->position++;
-        }
-        else
-        {
-                CompletePopArgumentsIR(funcs, node->left);
-                CompletePopArgumentsIR(funcs, node->right);
-        }
+//         if (node->type == VARIABLE)
+//         {
+//                 InsertIRnode(funcs->instrs + funcs->position, IR_POP, VAR_ARG, (int) node->data.id_var, NULL, NO_ARG, 0, NULL);
+//                 funcs->position++;
+//         }
+//         else
+//         {
+//                 CompletePopArgumentsIR(funcs, node->left);
+//                 CompletePopArgumentsIR(funcs, node->right);
+//         }
 
-        return 0;
-}
+//         return 0;
+// }
 
-int CompletePushArgumentsIR(IR_Function* funcs, Node* node, int* arg_num)
+int CompletePushArgumentsIR(IR_Function* funcs, Node* node, int* arg_num, err_allocator* err_alloc)
 {
         if (!node) return 0;
 
@@ -137,20 +313,20 @@ int CompletePushArgumentsIR(IR_Function* funcs, Node* node, int* arg_num)
 
         if (is_comma)
         {
-                CompletePushArgumentsIR(funcs, node->right, arg_num);
-                CompletePushArgumentsIR(funcs, node->left, arg_num);
+                CompletePushArgumentsIR(funcs, node->right, arg_num, err_alloc);
+                CompletePushArgumentsIR(funcs, node->left, arg_num, err_alloc);
 
         }
         else if (!is_comma)
         {
-                CompleteExpressionIR(funcs, node);
+                CompleteExpressionIR(funcs, node, err_alloc);
                 (*arg_num)++;
         }
 
         return 0;
 }
 
-void CompleteOperatorsIR(IR_Function* funcs, Node* node)
+void CompleteOperatorsIR(IR_Function* funcs, Node* node, err_allocator* err_alloc)
 {
         if (!node) {return;}
 
@@ -158,40 +334,59 @@ void CompleteOperatorsIR(IR_Function* funcs, Node* node)
         {
                 if (node->data.id_op == SEMICOLON)
                 {
-                        CompleteOperatorsIR(funcs, node->left);
-                        CompleteOperatorsIR(funcs, node->right);
+                        CompleteOperatorsIR(funcs, node->left, err_alloc);
+                        CompleteOperatorsIR(funcs, node->right, err_alloc);
                 }
                 else if (node->data.id_op == OP_ASSIGN)
                 {
-                        CompleteAssignIR(funcs, node);
+                        CompleteAssignIR(funcs, node, err_alloc);
                 }
                 else if (node->data.id_op == OP_LOOP)
                 {
-                        CompleteLoopIR(funcs, node);
+                        CompleteLoopIR(funcs, node, err_alloc);
                 }
                 else if (node->data.id_op == OP_CONDITION)
                 {
-                        CompleteIfIR(funcs, node);
+                        CompleteIfIR(funcs, node, err_alloc);
                 }
                 else if (node->data.id_op == RET)
                 {
-                        CompleteReturnIR(funcs, node);
+                        CompleteReturnIR(funcs, node, err_alloc);
                 }
                 else if ((node->data.id_op == INPUT) || (node->data.id_op == OUTPUT))
                 {
-                        CompleteInOutPutIR(funcs, node);
+                        CompleteInOutPutIR(funcs, node, err_alloc);
                 }
+                else 
+                {
+                        INSERT_ERROR_NODE(err_alloc, "invalid tree structure");
+                        err_alloc->need_call = true;
+                        return;
+                }
+        }
+        else 
+        {
+                INSERT_ERROR_NODE(err_alloc, "invalid tree structure");
+                err_alloc->need_call = true;
+                return;
         }
         
         return;
 }
 
-void CompleteReturnIR(IR_Function* funcs, Node* node)
+void CompleteReturnIR(IR_Function* funcs, Node* node, err_allocator* err_alloc)
 {
+        if (node->data.id_op != RET)
+        {
+                INSERT_ERROR_NODE(err_alloc, "expected ret");
+                err_alloc->need_call = true;
+                return;
+        }
+
         if (node->left)
-                CompleteExpressionIR(funcs, node->left);
+                CompleteExpressionIR(funcs, node->left, err_alloc);
         else if (node->right)
-                CompleteExpressionIR(funcs, node->right);
+                CompleteExpressionIR(funcs, node->right, err_alloc);
         
         InsertIRnode(funcs->instrs + funcs->position, IR_POP, REG_ARG, 8, "r8", NO_ARG, 0, NULL);
         funcs->position++;
@@ -211,24 +406,24 @@ void CompleteReturnIR(IR_Function* funcs, Node* node)
         return;
 }
 
-void CompleteInOutPutIR(IR_Function* funcs, Node* node)
+void CompleteInOutPutIR(IR_Function* funcs, Node* node, err_allocator* err_alloc)
 {
         char buf[BUFFER_SIZE] = {};
-        size_t id_var = 0;
+        int id_var = 0;
         
         if (node->left)
-                id_var = node->left->data.id_var;
+                id_var = (int) node->left->data.id_var;
         else if (node->right)
-                id_var = node->right->data.id_var;
+                id_var = (int) node->right->data.id_var;
 
-        sprintf(buf, "[r10 + %lu]", 8 * id_var);
+        sprintf(buf, "[r10 + %d]", 8 * id_var);
         
         if (node->data.id_op == INPUT)
         {
                 InsertIRnode(funcs->instrs + funcs->position, IR_CALL, LABEL_ARG, 0, "my_input", NO_ARG, 0, NULL);
                 funcs->position++;
                 
-                InsertIRnode(funcs->instrs + funcs->position, IR_MOV, MEM_ARG, id_var, buf, REG_ARG, 1, "rax");
+                InsertIRnode(funcs->instrs + funcs->position, IR_MOV, MEM_ARG, 8 * id_var, buf, REG_ARG, 1, "rax");
                 funcs->position++;
         }       
         else if (node->data.id_op == OUTPUT)
@@ -240,25 +435,34 @@ void CompleteInOutPutIR(IR_Function* funcs, Node* node)
                 funcs->position++;
         }
         else
-                return; /*error*/
+        {
+                INSERT_ERROR_NODE(err_alloc, "expected in/out function");
+                err_alloc->need_call = true;
+                return;
+        }
 
         return;
 }
 
 
-void CompleteAssignIR(IR_Function* funcs, Node* node)
+void CompleteAssignIR(IR_Function* funcs, Node* node, err_allocator* err_alloc)
 {
         size_t id_var = 0;
         if (node->left->type == VARIABLE)
         {
                 id_var = node->left->data.id_var;
         }
-        //else /*error*/
+        else
+        {
+                INSERT_ERROR_NODE(err_alloc, "expected variable");
+                err_alloc->need_call = true;
+                return;
+        }
 
         if (funcs->var_num < id_var + 1)
                 funcs->var_num = id_var + 1;
          
-        CompleteExpressionIR(funcs, node->right); 
+        CompleteExpressionIR(funcs, node->right, err_alloc); 
 
         
         InsertIRnode(funcs->instrs + funcs->position, IR_POP, REG_ARG, 8, "r8", NO_ARG, 0, NULL);
@@ -274,10 +478,10 @@ void CompleteAssignIR(IR_Function* funcs, Node* node)
 }
 
 
-IR_Instruction CompleteBoolExpressionIR(IR_Function* funcs, Node* node)
+IR_Instruction CompleteBoolExpressionIR(IR_Function* funcs, Node* node, err_allocator* err_alloc)
 {
-        CompleteExpressionIR(funcs, node->left);
-        CompleteExpressionIR(funcs, node->right);
+        CompleteExpressionIR(funcs, node->left, err_alloc);
+        CompleteExpressionIR(funcs, node->right, err_alloc);
 
         InsertIRnode(funcs->instrs + funcs->position, IR_POP, REG_ARG, 11, "r11", NO_ARG, 0, NULL);
         funcs->position++;
@@ -296,34 +500,39 @@ IR_Instruction CompleteBoolExpressionIR(IR_Function* funcs, Node* node)
                 return IR_JNE;
         else if (node->data.id_op == OP_NO_EQUAL)
                 return IR_JE;
+        else
+        {
+                INSERT_ERROR_NODE(err_alloc, "expected conditional jump");
+                err_alloc->need_call = true;
+                return IR_NOP;
+        }
                 
         return IR_NOP;
 }
 
-void CompleteExpressionIR(IR_Function* funcs, Node* node)
+void CompleteExpressionIR(IR_Function* funcs, Node* node, err_allocator* err_alloc)
 {
         if (!node) return;
 
         if (node->type == OPERATOR)
         {
                 if (node->left)
-                        CompleteExpressionIR(funcs, node->left);
+                        CompleteExpressionIR(funcs, node->left, err_alloc);
                 if (node->right) 
-                        CompleteExpressionIR(funcs, node->right);
+                        CompleteExpressionIR(funcs, node->right, err_alloc);
                 
-                if (node->left)
-                {
-                        InsertIRnode(funcs->instrs + funcs->position, IR_POP, REG_ARG, 11, "r11", NO_ARG, 0, NULL);
-                        funcs->position++;
-                }
-
                 if (node->right)
                 {
                         InsertIRnode(funcs->instrs + funcs->position, IR_POP, REG_ARG, 12, "r12", NO_ARG, 0, NULL);
                         funcs->position++;
                 }
-                
 
+                if (node->left)
+                {
+                        InsertIRnode(funcs->instrs + funcs->position, IR_POP, REG_ARG, 11, "r11", NO_ARG, 0, NULL);
+                        funcs->position++;
+                } 
+                
                 IR_Instruction instr_id = IR_NOP;
 
                 if (node->data.id_op == OP_ADD)
@@ -335,14 +544,18 @@ void CompleteExpressionIR(IR_Function* funcs, Node* node)
                 else if (node->data.id_op == OP_DIV)
                         instr_id = IR_DIV;
                 else
-                        printf("error\n");
+                {
+                        INSERT_ERROR_NODE(err_alloc, "invalid instruction");
+                        err_alloc->need_call = true;
+                        return;
+                }
 
                 if (instr_id == IR_ADD || instr_id == IR_SUB)
                 {
                         InsertIRnode(funcs->instrs + funcs->position, instr_id, REG_ARG, 11, "r11", REG_ARG, 12, "r12");
                         funcs->position++;
 
-                         InsertIRnode(funcs->instrs + funcs->position, IR_PUSH, REG_ARG, 11, "r11", NO_ARG, 0, NULL);
+                        InsertIRnode(funcs->instrs + funcs->position, IR_PUSH, REG_ARG, 11, "r11", NO_ARG, 0, NULL);
                         funcs->position++;
                 }
                 else if (instr_id == IR_MUL || instr_id == IR_DIV)
@@ -361,14 +574,13 @@ void CompleteExpressionIR(IR_Function* funcs, Node* node)
         {
                 size_t id_var = node->data.id_var;
                 if (funcs->var_num < id_var + 1)
-                        funcs->var_num = id_var + 1;
+                        funcs->var_num = (size_t) id_var + 1;
 
                 char buf[BUFFER_SIZE] = {};
-                
-                sprintf(buf, "[r10 + %lu]", 8 * node->data.id_var);
+                sprintf(buf, "[r10 + %lu]", 8 * id_var);
 
 
-                InsertIRnode(funcs->instrs + funcs->position, IR_MOV, REG_ARG, 8, "r8", MEM_ARG, 0, buf);
+                InsertIRnode(funcs->instrs + funcs->position, IR_MOV, REG_ARG, 8, "r8", MEM_ARG, (int) (8 * id_var), buf);
                 funcs->position++;
 
                 InsertIRnode(funcs->instrs + funcs->position, IR_PUSH, REG_ARG, 8, "r8", NO_ARG, 0, NULL);
@@ -378,9 +590,9 @@ void CompleteExpressionIR(IR_Function* funcs, Node* node)
         {
                 int arg_num = 0;
                 if (node->left)
-                        CompletePushArgumentsIR(funcs, node->left, &arg_num);
+                        CompletePushArgumentsIR(funcs, node->left, &arg_num, err_alloc);
                 if (node->right)
-                        CompletePushArgumentsIR(funcs, node->right, &arg_num);
+                        CompletePushArgumentsIR(funcs, node->right, &arg_num, err_alloc);
                 
                 int num_vars = (int) funcs->var_num;
                 
@@ -405,21 +617,21 @@ void CompleteExpressionIR(IR_Function* funcs, Node* node)
                 InsertIRnode(funcs->instrs + funcs->position, IR_CALL, LABEL_ARG, id_fun, buf, NO_ARG, 0, NULL);
                 funcs->position++;
                 
-                InsertIRnode(funcs->instrs + funcs->position, IR_SUB, REG_ARG, 10, "r10", NUM_ARG, 8 * num_vars, NULL);        
+                InsertIRnode(funcs->instrs + funcs->position, IR_SUB, REG_ARG, 10, "r10", NUM_ARG, 8 * num_vars, NULL);
                 funcs->position++;
         }
         else if (node->type == NUMBER)
         {   
                 InsertIRnode(funcs->instrs + funcs->position, IR_PUSH, NUM_ARG, (int) node->data.value, NULL, NO_ARG, 0, NULL);
-
                 funcs->position++;
         }
+
         
         return;
 }
 
 
-void CompleteLoopIR(IR_Function* funcs, Node* node)
+void CompleteLoopIR(IR_Function* funcs, Node* node, err_allocator* err_alloc)
 {
         char start_buf[BUFFER_SIZE] = {};
         char end_buf[BUFFER_SIZE] = {};
@@ -428,19 +640,25 @@ void CompleteLoopIR(IR_Function* funcs, Node* node)
         sprintf(end_buf, ".end_while_%lu", funcs->while_num);
 
         InsertIRnode(funcs->instrs + funcs->position, IR_LABEL, LABEL_ARG, 0, start_buf, NO_ARG, 0, NULL);
+        memcpy(funcs->label[funcs->label_num].label_name, start_buf, strlen(start_buf));
+        funcs->label[funcs->label_num].offset = funcs->instrs[funcs->position].offset;
+        funcs->label_num++;
         funcs->position++;
 
-        IR_Instruction instr_id = CompleteBoolExpressionIR(funcs, node->left);
+        IR_Instruction instr_id = CompleteBoolExpressionIR(funcs, node->left, err_alloc);
 
         InsertIRnode(funcs->instrs + funcs->position, instr_id, LABEL_ARG, 0, end_buf, NO_ARG, 0, NULL);
         funcs->position++;
         
-        CompleteOperatorsIR(funcs, node->right);
+        CompleteOperatorsIR(funcs, node->right, err_alloc);
 
         InsertIRnode(funcs->instrs + funcs->position, IR_JMP, LABEL_ARG, 0, start_buf, NO_ARG, 0, NULL);
         funcs->position++;
         
         InsertIRnode(funcs->instrs + funcs->position, IR_LABEL, LABEL_ARG, 0, end_buf, NO_ARG, 0, NULL);
+        memcpy(funcs->label[funcs->label_num].label_name, end_buf, strlen(end_buf));
+        funcs->label[funcs->label_num].offset = funcs->instrs[funcs->position].offset;
+        funcs->label_num++;
         funcs->position++;
 
         funcs->while_num++;
@@ -448,20 +666,23 @@ void CompleteLoopIR(IR_Function* funcs, Node* node)
         return;   
 }
 
-void CompleteIfIR(IR_Function* funcs, Node* node)
+void CompleteIfIR(IR_Function* funcs, Node* node, err_allocator* err_alloc)
 {
         char false_buf[BUFFER_SIZE] = {};
         
         sprintf(false_buf, ".end_if_%lu", funcs->if_num);
 
-        IR_Instruction instr_id = CompleteBoolExpressionIR(funcs, node->left);
+        IR_Instruction instr_id = CompleteBoolExpressionIR(funcs, node->left, err_alloc);
         
         InsertIRnode(funcs->instrs + funcs->position, instr_id, LABEL_ARG, 0, false_buf, NO_ARG, 0, NULL);
         funcs->position++;
 
-        CompleteOperatorsIR(funcs, node->right); 
+        CompleteOperatorsIR(funcs, node->right, err_alloc); 
         
         InsertIRnode(funcs->instrs + funcs->position, IR_LABEL, LABEL_ARG, 0, false_buf, NO_ARG, 0, NULL);
+        memcpy(funcs->label[funcs->label_num].label_name, false_buf, strlen(false_buf));
+        funcs->label[funcs->label_num].offset = funcs->instrs[funcs->position].offset;
+        funcs->label_num++;
         funcs->position++;
 
         funcs->if_num++;
@@ -546,13 +767,20 @@ int DumpIR(IR_Function* funcs)
         IR_node* ir_instrs = NULL;
         IR_Function* func  = NULL;
 
-        for (size_t i = 0; i < MAX_FUNC_NUM; i++)
+        for (size_t func_index = 0; func_index < MAX_FUNC_NUM; func_index++)
         {
-                func = funcs + i;
+                func = funcs + func_index;
                 printf("\n");
-                for (size_t j = 0; j < funcs[i].size; j++)
+
+                for (size_t label_index = 0; label_index < func->label_num; label_index++)
                 {
-                        ir_instrs = func->instrs + j;
+                        printf("labels[%lu] = <%s> (offset = %lu)\n", label_index, func->label[label_index].label_name, func->label[label_index].offset);
+                }
+
+                for (size_t instr_index = 0; instr_index < func->size; instr_index++)
+                {
+                        ir_instrs = func->instrs + instr_index;
+                        printf("offset = %lu ;", ir_instrs->offset);
                         DumpInstrName(ir_instrs->instr);
 
                         if (ir_instrs->instr == IR_DEFINE || ir_instrs->instr == IR_CALL)
@@ -621,12 +849,19 @@ int DumpIR(IR_Function* funcs)
                         {
                                 printf("arg_2: no_arg\n");
                         }
+                        
+                        printf("\t opcode: ");
+                        for (size_t opcode_index = 0; opcode_index < ir_instrs->x64_instr_size; opcode_index++)
+                        {
+                                printf("0x%02hhx ", ir_instrs->x64_instr[opcode_index]);
+                        }
+                        printf("\n");
+                        printf("\t bytes: %u\n", ir_instrs->x64_instr_size);
 
-                        // printf("\n");
                 }
         }
 
-        return 1;
+        return 0;
 }
 
 
@@ -635,64 +870,64 @@ int DumpIR(IR_Function* funcs)
 //-------------------------------------------------------------------------
 // Optimize
 
-int OptimizeIR(IR_Function* func)
-{
-        IR_node* ir_instr_1 = NULL;
-        IR_node* ir_instr_2 = NULL;
+// int OptimizeIR(IR_Function* func)
+// {
+//         IR_node* ir_instr_1 = NULL;
+//         IR_node* ir_instr_2 = NULL;
 
-        for (size_t instr_index = 0; instr_index < func->size; instr_index++)
-        {
-                ir_instr_1 = func->instrs + instr_index;
-                ir_instr_2 = func->instrs + instr_index + 1;
+//         for (size_t instr_index = 0; instr_index < func->size; instr_index++)
+//         {
+//                 ir_instr_1 = func->instrs + instr_index;
+//                 ir_instr_2 = func->instrs + instr_index + 1;
                 
-                if (ir_instr_1->instr == IR_PUSH && ir_instr_2->instr == IR_POP)
-                {
+//                 if (ir_instr_1->instr == IR_PUSH && ir_instr_2->instr == IR_POP)
+//                 {
                         
 
-                        // InsertIRnode(IR_MOV, /*somewhere*/, ir_instr_1->type_1, ir_instr_1->arg_1.value, ir_instr_1->arg_1.name, ir_instr_2->type_1, ir_instr_1->arg_2.value, ir_instr_2->arg_1.name)
-                }
+//                         // InsertIRnode(IR_MOV, /*somewhere*/, ir_instr_1->type_1, ir_instr_1->arg_1.value, ir_instr_1->arg_1.name, ir_instr_2->type_1, ir_instr_1->arg_2.value, ir_instr_2->arg_1.name)
+//                 }
 
-                if ((ir_instr_1->instr == IR_MOV) && (ir_instr_1->type_1 == ir_instr_1->type_2) && ((ir_instr_1->arg_2.value == ir_instr_1->arg_1.value)))
-                {
-                        // DeleteIRnode(/*somewhere*/);
-                }
-        }
+//                 if ((ir_instr_1->instr == IR_MOV) && (ir_instr_1->type_1 == ir_instr_1->type_2) && ((ir_instr_1->arg_2.value == ir_instr_1->arg_1.value)))
+//                 {
+//                         // DeleteIRnode(/*somewhere*/);
+//                 }
+//         }
 
-        return 0;
-}
-
-
+//         return 0;
+// }
 
 
-int FindMostCommonVars(IR_Function* funcs, int* vars)
-{
-        // int occurrence_rate[100] = {};
 
-        // for (size_t i = 0; i < index_node; i++)
-        // {
-        //         if (ir[i].type_1 == VAR_ARG)
-        //                 occurrence_rate[ir[i].arg_1.value]++;
 
-        //         if (ir[i].type_2 == VAR_ARG)
-        //                 occurrence_rate[ir[i].arg_2.value]++;
-        // }
+// int FindMostCommonVars(IR_Function* funcs, int* vars)
+// {
+//         // int occurrence_rate[100] = {};
 
-        // for (size_t i = 0; i < 10; i++)
-        // {
-        //         printf("a[%lu] = %d\n", i, occurrence_rate[i]);
+//         // for (size_t i = 0; i < index_node; i++)
+//         // {
+//         //         if (ir[i].type_1 == VAR_ARG)
+//         //                 occurrence_rate[ir[i].arg_1.value]++;
+
+//         //         if (ir[i].type_2 == VAR_ARG)
+//         //                 occurrence_rate[ir[i].arg_2.value]++;
+//         // }
+
+//         // for (size_t i = 0; i < 10; i++)
+//         // {
+//         //         printf("a[%lu] = %d\n", i, occurrence_rate[i]);
         
-        // }
+//         // }
 
-        // qsort(occurrence_rate, 100, sizeof(int), CompareIntDescending);
+//         // qsort(occurrence_rate, 100, sizeof(int), CompareIntDescending);
 
 
-        return 0;
-}
+//         return 0;
+// }
 
-int CompareIntDescending(const void* a, const void* b)
-{
-        return (*(int*)b - *(int*)a);
-}
+// int CompareIntDescending(const void* a, const void* b)
+// {
+//         return (*(int*)b - *(int*)a);
+// }
 
 
 

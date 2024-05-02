@@ -49,7 +49,7 @@ int InsertInstruction(Instruction* instrs, char* asm_insr, size_t asm_instr_size
 
     memcpy(instrs->x86_64_instr, (char*) x86_instr, (size_t) instr_size);
     
-    instrs->instr_size = instr_size;
+    instrs->instr_size = (short unsigned) instr_size;
 
     return 0;
 }
