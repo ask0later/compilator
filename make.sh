@@ -1,7 +1,5 @@
-cd front/
+cd backend
 make
-cd .. && cd middle
-make
-cd .. && cd back
+cd .. && cd ELF_translator
 make
 cd ..

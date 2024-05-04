@@ -1,7 +1,5 @@
-cd front/
+cd backend
 make clean
-cd .. && cd middle
-make clean
-cd .. && cd back
+cd .. && cd ELF_translator
 make clean
 cd ..

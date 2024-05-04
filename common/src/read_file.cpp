@@ -142,5 +142,5 @@ size_t GetSizeFile(const char* input_file, err_allocator* err_alloc)
         return 0;
     }
     
-    return (size_t) (buff.st_size + 1);
+    return (size_t) (buff.st_size);
 }
