@@ -11,6 +11,9 @@
 #include "AST_to_nasm.h"
 #include "IR_to_opcodes.h"
 
+const char TEXT_SEGMENT_FILE[] = "../data_and_text/text_segment.txt";
+const char DATA_SEGMENT_FILE[] = "../data_and_text/data_segment.txt";
+
 // ./ir ../examples/tree_factorial.txt nasm_file.asm
 
 // nasm -f elf64 nasm_file.asm 
@@ -96,7 +99,7 @@ int main(const int argc, const char* argv[])
         return 1;
     }
 
-    DumpIR(funcs);
+    //DumpIR(funcs);
     PrintIRtoNasm(To, funcs);
 
 
@@ -119,8 +122,8 @@ int main(const int argc, const char* argv[])
         return 1;
     }
 
-    WriteFile(&segment.text, "../examples/text_segment.txt", &err_alloc);
-    WriteFile(&segment.data, "../examples/data_segment.txt", &err_alloc);
+    WriteFile(&segment.text, TEXT_SEGMENT_FILE, &err_alloc);
+    WriteFile(&segment.data, DATA_SEGMENT_FILE, &err_alloc);
 
     DtorIR(funcs);
     DtorBuffer(&buf);

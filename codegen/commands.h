@@ -8,7 +8,7 @@ OP(FUN_COS, "cos", "cos")
 OP(FUN_POW, "^", "^")
 OP(FUN_SQRT, "sqrt", "sqrt")
 OP(FUN_LN, "ln", "ln")
-OP(DEFINE, "handing over to you", "")
+OP(DEFINE, "handing over to you", "define")
 OP(RET, "out", "return")
 OP(OP_ASSIGN, "encoding matches", "= ") // exectly "= " (with space) so there is no space matches
 OP(OP_LOOP, "reseption while", "while")

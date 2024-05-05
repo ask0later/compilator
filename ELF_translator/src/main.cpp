@@ -4,7 +4,7 @@
 #include "translator.h"
 
 
-// ./trans ../examples/text_segment.txt ../examples/data_segment.txt
+// ./trans ../data_and_text/text_segment.txt ../data_and_text/data_segment.txt
 
 int main(const int argc, const char* argv[])
 {
@@ -65,7 +65,7 @@ int main(const int argc, const char* argv[])
         return 1;
     }
 
-    WriteFile(&elf_buf, "../elf_file", &err_alloc);
+    WriteFile(&elf_buf, OUTPUT_FILE, &err_alloc);
     if (err_alloc.need_call)
     {
         INSERT_ERROR_NODE(&err_alloc, "invalid executing WriteFile");

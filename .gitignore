@@ -1,21 +1,21 @@
-front/obj
-front/.cache
-front/compile_commands.json
-front/Tree.dot
-front/Tree.jpg
+ELF_translator/obj
+ELF_translator/.cache
+ELF_translator/compile_commands.json
+ELF_translator/Tree.dot
+ELF_translator/Tree.jpg
 
+front_end/obj
+front_end/.cache
+front_end/compile_commands.json
+front_end/Tree.dot
+front_end/Tree.jpg
 
-middle/obj
-middle/.cache
-middle/compile_commands.json
-middle/Tree.dot
-middle/Tree.jpg
+back_end/obj
+back_end/.cache
+back_end/compile_commands.json
+back_end/Tree.dot
+back_end/Tree.jpg
 
-back/obj
-back/.cache
-back/compile_commands.json
-back/Tree.dot
-back/Tree.jpg
+common/obj
 
 .vscode
-Processor

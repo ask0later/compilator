@@ -171,10 +171,3 @@ int CompleteData(Text* elf_buf, Text* data)
 
         return 0;
 }
-
-
-int VerificatorELF(Text* elf_buf, err_allocator* err_alloc)
-{
-
-        return 0;
-}

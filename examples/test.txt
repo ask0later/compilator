@@ -1,0 +1,15 @@
+handing over to you |.-.. .. -. . | (|-...| , |-.-.|)
+{
+    |-.--| encoding matches |-.-.| * |-...| ;
+    out |-.--| ;
+}
+
+handing over to you |-- .- .. -. | ()
+{
+        give a signal (|.-|);
+        give a signal (|-...|);
+        
+        |-.-.| encoding matches |.-.. .. -. .| (|.-|, |-...|) ;
+
+        get the message (|-.-.|) ;
+}

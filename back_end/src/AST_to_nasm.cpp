@@ -119,11 +119,9 @@ void CompleteArgFuncDef(Instruction* instrs, size_t* index_node, Node* node)
         CompleteVariable(instrs, index_node, node);
 
         memcpy(instrs[*index_node].asm_instr, "sub r12, 8", sizeof("sub r12, 8"));
-        // 49 83 EC 08
         (*index_node)++;
 
         memcpy(instrs[*index_node].asm_instr, "mov r10, [r12]", sizeof("mov r10, [r12]"));
-        // 
         (*index_node)++;
 
         memcpy(instrs[*index_node].asm_instr, "mov [r11], r10", sizeof("mov [r11], r10"));
@@ -182,14 +180,12 @@ void CompleteInOutPut(Instruction* instrs, size_t* index_node, Node* node)
     if (node->data.id_op == INPUT)
     {
         memcpy(instrs[*index_node].asm_instr, "call my_input", sizeof("call my_input"));
-        // E8 ** 00 00
         (*index_node)++;
 
         CompleteVariable(instrs, index_node, node->left);
         CompleteVariable(instrs, index_node, node->right);
 
         memcpy(instrs[*index_node].asm_instr, "sub r12, 8", sizeof("sub r12, 8"));
-        // 49 83 EC 08
         (*index_node)++;
 
         memcpy(instrs[*index_node].asm_instr, "mov r10, [r12]", sizeof("mov r10, [r12]"));
@@ -210,11 +206,9 @@ void CompleteInOutPut(Instruction* instrs, size_t* index_node, Node* node)
         (*index_node)++;
 
         memcpy(instrs[*index_node].asm_instr, "add r12, 8", sizeof("add r12, 8"));
-        // 49 83 C4 08
         (*index_node)++;
 
         memcpy(instrs[*index_node].asm_instr, "call my_output", sizeof("call my_output"));
-        // E8 ** 00 00
         (*index_node)++;       
     }
 }
@@ -243,7 +237,6 @@ void CompleteLoop(Instruction* instrs, size_t* index_node, Node* node, size_t* n
     CompleteOperators(instrs, index_node, node->right, num_while, num_if);
 
     sprintf(buf, "jmp while_%lu", old_num_while);
-    // 
     memcpy(instrs[*index_node].asm_instr, buf, strlen(buf));
     (*index_node)++;
 
@@ -286,7 +279,6 @@ void CompleteReturn(Instruction* instrs, size_t* index_node, Node* node)
         CompleteExpression(instrs, index_node, node->left);
 
     memcpy(instrs[*index_node].asm_instr, "ret\n", sizeof("ret\n"));
-    // C3
     (*index_node)++; 
 
     return;
@@ -298,7 +290,6 @@ void CompleteAssign(Instruction* instrs, size_t* index_node, Node* node)
     CompleteVariable(instrs, index_node, node->left);
 
     memcpy(instrs[*index_node].asm_instr, "sub r12, 8", sizeof("sub r12, 8"));
-    // 49 83 EC 08
     (*index_node)++;
 
     memcpy(instrs[*index_node].asm_instr, "mov r10, [r12]", sizeof("mov r10, [r12]"));
@@ -341,22 +332,18 @@ void CompleteBoolExpression(Instruction* instrs, size_t* index_node, Node* node)
     if (node->data.id_op == OP_ABOVE)
     {
         memcpy(instrs[*index_node].asm_instr, "jbe ", sizeof("jbe "));
-        // 76
     }
     else if (node->data.id_op == OP_BELOW)
     {
         memcpy(instrs[*index_node].asm_instr, "jae ", sizeof("jae "));
-        // 73
     }
     else if (node->data.id_op == OP_EQUAL)
     {
         memcpy(instrs[*index_node].asm_instr, "jne ", sizeof("jne "));
-        // 75
     }
     else if (node->data.id_op == OP_NO_EQUAL)
     {
         memcpy(instrs[*index_node].asm_instr, "je ", sizeof("je "));
-        // 74
     }
     return;
 }
@@ -377,7 +364,6 @@ void CompleteExpression(Instruction* instrs, size_t* index_node, Node* node)
         }
 
         memcpy(instrs[*index_node].asm_instr, "sub r12, 8", sizeof("sub r12, 8"));
-        // 49 83 EC 08
         (*index_node)++;
 
         fprintf(stderr, "%lu\n", *index_node);
@@ -385,7 +371,6 @@ void CompleteExpression(Instruction* instrs, size_t* index_node, Node* node)
         (*index_node)++;
 
         memcpy(instrs[*index_node].asm_instr, "sub r12, 8", sizeof("sub r12, 8"));
-        // 49 83 EC 08
         (*index_node)++;
 
         memcpy(instrs[*index_node].asm_instr, "mov rdx, [r12]", sizeof("mov rsi, [r12]"));
@@ -422,7 +407,6 @@ void CompleteExpression(Instruction* instrs, size_t* index_node, Node* node)
             (*index_node)++;
 
             memcpy(instrs[*index_node].asm_instr, "add r12, 8", sizeof("add r12, 8"));
-            // 49 83 C4 01
             (*index_node)++;
         }
         else if (node->data.id_op == OP_DIV)
@@ -433,23 +417,11 @@ void CompleteExpression(Instruction* instrs, size_t* index_node, Node* node)
             (*index_node)++;
 
             memcpy(instrs[*index_node].asm_instr, "add r12, 8", sizeof("add r12, 8"));
-            // 49 83 C4 01
             (*index_node)++;
         }
 
         memcpy(instrs[*index_node].asm_instr, buf, strlen(buf));
-        (*index_node)++;
-
-        // else if (node->data.id_op == FUN_SQRT)
-        // {
-
-        // }
-        //     fprintf(To, "sqrt \n");
-        // else if (node->data.id_op == FUN_SIN)
-        //     fprintf(To, "sin \n");
-        // else if (node->data.id_op == FUN_COS)
-        //     fprintf(To, "cos \n");
-        
+        (*index_node)++;        
     }
     else if (node->type == VARIABLE)
     {
@@ -462,7 +434,6 @@ void CompleteExpression(Instruction* instrs, size_t* index_node, Node* node)
         (*index_node)++;
 
         memcpy(instrs[*index_node].asm_instr, "add r12, 8", sizeof("add r12, 8"));
-        // 49 83 C4 08
         (*index_node)++;
     }
     else if (node->type == FUNCTION)
@@ -487,7 +458,6 @@ void CompleteExpression(Instruction* instrs, size_t* index_node, Node* node)
         (*index_node)++;
 
         memcpy(instrs[*index_node].asm_instr, "add r12, 8", sizeof("add r12, 8"));
-        // 49 83 C4 01
         (*index_node)++;
     }
     
@@ -504,7 +474,6 @@ void CompleteVariable(Instruction* instrs, size_t* index_node, Node* node)
     char buf[20] = {};
     size_t x = 8 * node->data.id_var;
     sprintf(buf, "add r11, %lu", x);
-    // 49 83 C3 xx
 
     memcpy(instrs[*index_node].asm_instr, buf, strlen(buf) + 1);
     (*index_node)++;
