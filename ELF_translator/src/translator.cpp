@@ -33,14 +33,6 @@ int TranslateToELF(Text* elf_buf, Text* code, Text* data, err_allocator* err_all
                 return 1;
         }
 
-
-        VerificatorELF(elf_buf, err_alloc);
-        if (err_alloc->need_call)
-        {
-                INSERT_ERROR_NODE(err_alloc, "invalid executing VerificatorELF");
-                return 1;
-        }
-
         return 0;
 }
 

@@ -96,12 +96,12 @@ int InsertOpcode(IR_node* node)
                                 if (node->type_1 != NUM_ARG && node->type_1 != LABEL_ARG && node->type_1 != MEM_ARG)
                                         match &= data_table[data_index].arg_1 == node->arg_1.value;
                                 
-                                if (node->type_2 != NUM_ARG)
+                                if (node->type_2 != NUM_ARG && node->type_2 != MEM_ARG)
                                         match &= data_table[data_index].arg_2  == node->arg_2.value;
 
                                 if (match)
                                 {
-                                        node->x64_instr_size = (unsigned short) strlen((const char*) data_table[data_index].opcode);
+                                        node->x64_instr_size = data_table[data_index].opcode_size;
                                         memcpy(node->x64_instr, data_table[data_index].opcode, node->x64_instr_size);
                                         break;
                                 }
@@ -284,7 +284,6 @@ int ConvertIR(IR_Function* funcs, Tree** trees, err_allocator* err_alloc)
         func_num--;
                 
         IR_Function* main = funcs;
-        unsigned char temp[] = {0x49, 0xBA, 0x00, 0x21, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00};
 
         main->instrs[main->position].instr = IR_NOP;
         main->instrs[main->position].x64_instr[0] = 0x90;
@@ -295,8 +294,6 @@ int ConvertIR(IR_Function* funcs, Tree** trees, err_allocator* err_alloc)
         char RAM_PTR[] = "RAM_PTR";
 
         InsertIRnode(main->instrs + main->position, IR_MOV, REG_ARG, 10, r10, MEM_ARG, 0, RAM_PTR);
-        memcpy(main->instrs[main->position].x64_instr, (char*) temp, sizeof(temp));
-        main->instrs[main->position].x64_instr_size = sizeof(temp);
         main->position++;
 
 
@@ -346,7 +343,6 @@ int ConvertIR(IR_Function* funcs, Tree** trees, err_allocator* err_alloc)
         PatchIR(funcs, err_alloc);
 
         return 0;
-
 }
 
 int CompleteFunctionIR(IR_Function* funcs, Node* node, err_allocator* err_alloc)

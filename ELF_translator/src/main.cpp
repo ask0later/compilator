@@ -4,11 +4,11 @@
 #include "translator.h"
 
 
-// ./trans ../data_and_text/text_segment.txt ../data_and_text/data_segment.txt
+// ./trans ../data_and_text/text_segment.txt ../data_and_text/data_segment.txt ../elf_file
 
 int main(const int argc, const char* argv[])
 {
-    if (argc != 3)
+    if (argc != 4)
     {
         printf("lack of arguments\n");
         return 1;
@@ -17,8 +17,9 @@ int main(const int argc, const char* argv[])
     struct err_allocator err_alloc = {};
     CtorErrorAllocator(&err_alloc);
 
-    const char* code_file = argv[1];
-    const char* data_file = argv[2];
+    const char* code_file   = argv[1];
+    const char* data_file   = argv[2];
+    const char* output_file = argv[3];
 
     Text code = {};
     Text data = {};
@@ -65,7 +66,7 @@ int main(const int argc, const char* argv[])
         return 1;
     }
 
-    WriteFile(&elf_buf, OUTPUT_FILE, &err_alloc);
+    WriteFile(&elf_buf, output_file, &err_alloc);
     if (err_alloc.need_call)
     {
         INSERT_ERROR_NODE(&err_alloc, "invalid executing WriteFile");

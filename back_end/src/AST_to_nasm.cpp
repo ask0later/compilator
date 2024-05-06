@@ -1,5 +1,4 @@
 #include "AST_to_nasm.h"
-#include "read_file.h"
 #include "tree.h"
 #include <cstddef>
 #include <cstring>
@@ -66,7 +65,7 @@ int CompleteInstructions(Instruction** instrs, Tree** trees, err_allocator* err_
 
     for (size_t i = 0; i < NUM_TREE && trees[i] != NULL; i++)
     {
-        CompleteFunction(*instrs, &index_node, trees[i]->root, err_alloc);
+        CompleteFunction(*instrs, &index_node, trees[i]->root);
     }
 
     sprintf(buf, "\nRAM_PTR: dq %lu dup(0)", RAM_SIZE);
@@ -82,7 +81,7 @@ int CompleteInstructions(Instruction** instrs, Tree** trees, err_allocator* err_
     return 0;
 }
 
-int CompleteFunction(Instruction* instrs, size_t* index_node, Node* node, err_allocator* err_alloc)
+int CompleteFunction(Instruction* instrs, size_t* index_node, Node* node)
 {
     if (node->type == FUNCTION)
     {

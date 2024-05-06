@@ -30,7 +30,7 @@ int PrintInstructions(Instruction* instrs);
 
 int CompleteInstructions(Instruction** ir_nodes, Tree** trees, err_allocator* err_alloc);
 
-int CompleteFunction(Instruction* ir_nodes, size_t* index_node, Node* node, err_allocator* err_alloc);
+int CompleteFunction(Instruction* ir_nodes, size_t* index_node, Node* node);
 
 void CompleteArgFuncDef(Instruction* ir_nodes, size_t* index_node, Node* node);
 void CompleteArgFuncAnnoun(Instruction* ir_nodes, size_t* index_node, Node* node);

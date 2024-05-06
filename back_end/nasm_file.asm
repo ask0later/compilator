@@ -8,19 +8,14 @@ nop
  func_1 :
 call my_input 
 push rax 
-pop  QWORD [r10 + 24] 
-call my_input 
-push rax 
-pop  QWORD [r10 + 32] 
-push  QWORD [r10 + 32] 
-push  QWORD [r10 + 24] 
-add r10 , 48 
-pop  QWORD [r10 + 0] 
 pop  QWORD [r10 + 8] 
+push  QWORD [r10 + 8] 
+add r10 , 24 
+pop  QWORD [r10 + 0] 
 call func_0 
-sub r10 , 48 
-pop  QWORD [r10 + 40] 
-push  QWORD [r10 + 40] 
+sub r10 , 24 
+pop  QWORD [r10 + 16] 
+push  QWORD [r10 + 16] 
 pop rax 
 call my_output 
 push 60 
@@ -30,15 +25,48 @@ pop rdi
 syscall 
 nop 
  func_0 :
-push  QWORD [r10 + 8] 
 push  QWORD [r10 + 0] 
+push 0 
+pop r11 
+pop r12 
+cmp r11 , r12 
+jne .end_if_0 
+push 1 
+pop r8 
+pop r9 
+push r8 
+push r9 
+ret 
+ .end_if_0 :
+push  QWORD [r10 + 0] 
+push 1 
+pop r11 
+pop r12 
+cmp r11 , r12 
+jne .end_if_1 
+push 1 
+pop r8 
+pop r9 
+push r8 
+push r9 
+ret 
+ .end_if_1 :
+push  QWORD [r10 + 0] 
+push  QWORD [r10 + 0] 
+push 1 
+pop r12 
+pop r11 
+sub r11 , r12 
+push r11 
+add r10 , 8 
+pop  QWORD [r10 + 0] 
+call func_0 
+sub r10 , 8 
 pop r12 
 pop r11 
 mov rax , r11 
 mul r12 
 push rax 
-pop  QWORD [r10 + 16] 
-push  QWORD [r10 + 16] 
 pop r8 
 pop r9 
 push r8 
