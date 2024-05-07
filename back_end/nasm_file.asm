@@ -2,9 +2,7 @@ section .text
 global _start
 _start:
 mov r10, RAM_PTR
-nop 
 mov r10 , RAM_PTR 
-nop 
  func_1 :
 call my_input 
 push rax 
@@ -23,7 +21,6 @@ pop rax
 push 0 
 pop rdi 
 syscall 
-nop 
  func_0 :
 push  QWORD [r10 + 0] 
 pop  QWORD [r10 + 8] 

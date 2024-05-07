@@ -290,11 +290,6 @@ int ConvertIR(IR_Function* ir_funcs, Tree** trees, err_allocator* err_alloc)
                 
         IR_Function* main = ir_funcs;
 
-        main->instrs[main->position].instr = IR_NOP;
-        main->instrs[main->position].x64_instr[0] = 0x90;
-        main->instrs[main->position].x64_instr_size = 1;
-        main->position++;
-
         char r10[] = "r10";
         char RAM_PTR[] = "RAM_PTR";
 
@@ -352,11 +347,6 @@ int ConvertIR(IR_Function* ir_funcs, Tree** trees, err_allocator* err_alloc)
 
 int CompleteFunctionIR(IR_Function* ir_func, Node* node, err_allocator* err_alloc)
 {
-        ir_func->instrs[ir_func->position].instr = IR_NOP;
-        ir_func->instrs[ir_func->position].x64_instr[0] = 0x90;
-        ir_func->instrs[ir_func->position].x64_instr_size = 1;
-        ir_func->position++;
-
         if (node->type == FUNCTION)
         {
                 char buf[BUFFER_SIZE] = {};
@@ -376,10 +366,7 @@ int CompleteFunctionIR(IR_Function* ir_func, Node* node, err_allocator* err_allo
                 else
                         CompleteOperatorsIR(ir_func, node->right, err_alloc);
         }
-
-
         
-
         return 0;
 }
 
