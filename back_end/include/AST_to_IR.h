@@ -56,7 +56,7 @@ struct IR_data
         char            name[MAX_NAME_SIZE];
 };
 
-struct IR_node
+struct IR_block
 {
         IR_Instruction  instr;
 
@@ -80,7 +80,7 @@ struct Label
 
 struct IR_Function
 {
-        IR_node*        instrs;
+        IR_block*        instrs;
         size_t          position;
         size_t          size;
 
@@ -259,32 +259,32 @@ IR_to_opcode const table[] =
 
 //------------------------------------------------------------------------
 
-int     CtorIR(IR_Function** funcs, err_allocator* err_alloc);
-void    DtorIR(IR_Function* funcs);
+int     CtorIR(IR_Function** ir_func, err_allocator* err_alloc);
+void    DtorIR(IR_Function* ir_func);
 
-int     ConvertIR(IR_Function* funcs, Tree** trees, err_allocator* err_alloc);
-int     CompleteProgramExit(IR_Function* func);
+int     ConvertIR(IR_Function* ir_funcs, Tree** trees, err_allocator* err_alloc);
+int     CompleteProgramExit(IR_Function* ir_func);
 
 
-int     CompleteFunctionIR(IR_Function* funcs, Node* node, err_allocator* err_alloc);
-int     CompletePushArgumentsIR(IR_Function* funcs, Node* node, int* arg_num, err_allocator* err_alloc);
-int     CompletePopArgumentsIR(IR_Function* funcs, Node* node, err_allocator* err_alloc);
+int     CompleteFunctionIR(IR_Function* ir_func, Node* node, err_allocator* err_alloc);
+int     CompletePushArgumentsIR(IR_Function* ir_func, Node* node, int* arg_num, err_allocator* err_alloc);
+int     CompletePopArgumentsIR(IR_Function* ir_func, Node* node, err_allocator* err_alloc);
 
-void    CompleteOperatorsIR(IR_Function* funcs, Node* node, err_allocator* err_alloc);
-void    CompleteInOutPutIR(IR_Function* funcs, Node* node, err_allocator* err_alloc);
+void    CompleteOperatorsIR(IR_Function* ir_func, Node* node, err_allocator* err_alloc);
+void    CompleteInOutPutIR(IR_Function* ir_func, Node* node, err_allocator* err_alloc);
 
-void    CompleteAssignIR(IR_Function* funcs, Node* node, err_allocator* err_alloc);
-void    CompleteLoopIR(IR_Function* funcs, Node* node, err_allocator* err_alloc);
-void    CompleteIfIR(IR_Function* funcs, Node* node, err_allocator* err_alloc);
-void    CompleteReturnIR(IR_Function* funcs, Node* node, err_allocator* err_alloc);
-void    CompleteExpressionIR(IR_Function* funcs, Node* node, err_allocator* err_alloc);
+void    CompleteAssignIR(IR_Function* ir_func, Node* node, err_allocator* err_alloc);
+void    CompleteLoopIR(IR_Function* ir_func, Node* node, err_allocator* err_alloc);
+void    CompleteIfIR(IR_Function* ir_func, Node* node, err_allocator* err_alloc);
+void    CompleteReturnIR(IR_Function* ir_func, Node* node, err_allocator* err_alloc);
+void    CompleteExpressionIR(IR_Function* ir_func, Node* node, err_allocator* err_alloc);
 
 IR_Instruction CompleteBoolExpressionIR(IR_Function* funcs, Node* node, err_allocator* err_alloc);
 
 //--------------------------------------------------------------------------
 
-int InsertIRnode(IR_node* ir_nodes, IR_Instruction instr_id, IR_type type_1, int arg_1, char* name_1, IR_type type_2, int arg_2, char* name_2);
-int InsertOpcode(IR_node* node);
+int InsertIRblock(IR_Function* ir_func, IR_Instruction instr_id, IR_type type_1, int arg_1, char* name_1, IR_type type_2, int arg_2, char* name_2);
+int InsertOpcode(IR_block* block);
 
 
 
@@ -292,11 +292,11 @@ int ConvertToHex(int dec_number, unsigned char* hex_number);
 
 //--------------------------------------------------------------------------
 
-int PatchIR(IR_Function* funcs, err_allocator* err_alloc);
-int PatchJumps(IR_Function* func, Label* func_labels, size_t func_num, err_allocator* err_alloc);
+int PatchIR(IR_Function* ir_func, err_allocator* err_alloc);
+int PatchJumps(IR_Function* ir_func, Label* func_labels, size_t func_num, err_allocator* err_alloc);
 
-size_t GetOffsetConditionalJumps(IR_node* node, IR_Function* func, err_allocator* err_alloc);
-size_t GetOffsetGlobalCalls(IR_node* node, Label* func_labels, size_t func_num, size_t func_offset, err_allocator* err_alloc);
+size_t GetOffsetConditionalJumps(IR_block* ir_block, IR_Function* ir_func, err_allocator* err_alloc);
+size_t GetOffsetGlobalCalls(IR_block* ir_block, Label* func_labels, size_t func_num, size_t func_offset, err_allocator* err_alloc);
 
 // int OptimizeIR(IR_Function* func);
 // int CompareIntDescending(const void* a, const void* b);

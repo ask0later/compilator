@@ -33,7 +33,7 @@ int PrintIRtoNasm(FILE* To, IR_Function* funcs)
 
 int PrintIRFunction(FILE* To, IR_Function* funcs)
 {
-        IR_node* instr_ptr = funcs->instrs;
+        IR_block* instr_ptr = funcs->instrs;
 
         for (size_t instr_index = 0; instr_index < funcs->size; instr_index++)
         {
@@ -87,9 +87,9 @@ int PrintIRArgument(FILE* To, IR_type type, IR_data* data)
         return 0;
 }
 
-int PrintIRInstruction(FILE* To, IR_node* ir_nodes)
+int PrintIRInstruction(FILE* To, IR_block* ir_block)
 {
-        fprintf(To, "%s ", nasm_instrs[ir_nodes->instr]);
+        fprintf(To, "%s ", nasm_instrs[ir_block->instr]);
 
         return 0;
 }

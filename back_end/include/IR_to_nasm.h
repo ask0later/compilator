@@ -32,7 +32,7 @@ const char* const nasm_instrs[] = {"nop",
 int PrintIRtoNasm(FILE* To, IR_Function* funcs);
 
 int PrintIRFunction(FILE* To, IR_Function* funcs);
-int PrintIRInstruction(FILE* To, IR_node* ir_nodes);
+int PrintIRInstruction(FILE* To, IR_block* ir_block);
 int PrintIRArgument(FILE* To, IR_type type, IR_data* data);
 
 int PrintInOutLib(FILE* To);

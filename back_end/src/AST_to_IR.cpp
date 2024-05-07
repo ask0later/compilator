@@ -8,15 +8,15 @@
 #include <cstring>
 
 
-const size_t MAX_IR_NODE = 100;
+const size_t MAX_IR_BLOCK = 100;
 const size_t BUFFER_SIZE = 30;
 
 
-int CtorIR(IR_Function** funcs, err_allocator* err_alloc)
+int CtorIR(IR_Function** ir_funcs, err_allocator* err_alloc)
 {
-        *funcs = (IR_Function*) calloc(MAX_FUNC_NUM, sizeof(IR_Function));
+        *ir_funcs = (IR_Function*) calloc(MAX_FUNC_NUM, sizeof(IR_Function));
 
-        if (!(*funcs))
+        if (!(*ir_funcs))
         {
                 INSERT_ERROR_NODE(err_alloc, "dynamic allocation is fault");
                 err_alloc->need_call = true;
@@ -25,14 +25,14 @@ int CtorIR(IR_Function** funcs, err_allocator* err_alloc)
 
         for (size_t i = 0; i < MAX_FUNC_NUM; i++)
         {
-                (*funcs)[i].size = 0;
-                (*funcs)[i].if_num = 0;
-                (*funcs)[i].while_num = 0;
-                (*funcs)[i].position = 0;
+                (*ir_funcs)[i].size = 0;
+                (*ir_funcs)[i].if_num = 0;
+                (*ir_funcs)[i].while_num = 0;
+                (*ir_funcs)[i].position = 0;
                 
-                (*funcs)[i].instrs = (IR_node*) calloc(MAX_IR_NODE, sizeof(IR_node));
+                (*ir_funcs)[i].instrs = (IR_block*) calloc(MAX_IR_BLOCK, sizeof(IR_block));
                 
-                if (!((*funcs)[i].instrs))
+                if (!((*ir_funcs)[i].instrs))
                 {
                         INSERT_ERROR_NODE(err_alloc, "dynamic allocation is fault");
                         err_alloc->need_call = true;
@@ -44,45 +44,50 @@ int CtorIR(IR_Function** funcs, err_allocator* err_alloc)
 }
 
 
-void DtorIR(IR_Function* funcs)
+void DtorIR(IR_Function* ir_funcs)
 {
         for (size_t i = 0; i < MAX_FUNC_NUM; i++)
         {
-                free(funcs[i].instrs);
+                free(ir_funcs[i].instrs);
         }
 
-        free(funcs);
+        free(ir_funcs);
 }
 
-int InsertIRnode(IR_node* ir_nodes, IR_Instruction instr_id, IR_type type_1, int arg_1, char* name_1, IR_type type_2, int arg_2, char* name_2)
+int InsertIRblock(IR_Function* ir_func, IR_Instruction instr_id, IR_type type_1, int arg_1, char* name_1, IR_type type_2, int arg_2, char* name_2)
 {
-        ir_nodes->instr  = instr_id;
+        IR_block* ir_block = ir_func->instrs + ir_func->position;
 
-        ir_nodes->type_1 = type_1;
-        ir_nodes->arg_1.value = arg_1;
+        ir_block->instr  = instr_id;
+
+        ir_block->type_1 = type_1;
+        ir_block->arg_1.value = arg_1;
 
         if (name_1)
-                memcpy(ir_nodes->arg_1.name, name_1, strlen(name_1));
+                memcpy(ir_block->arg_1.name, name_1, strlen(name_1));
 
-        ir_nodes->type_2 = type_2;
-        ir_nodes->arg_2.value = arg_2;
+        ir_block->type_2 = type_2;
+        ir_block->arg_2.value = arg_2;
 
         if (name_2)
-                memcpy(ir_nodes->arg_2.name, name_2, strlen(name_2));
+                memcpy(ir_block->arg_2.name, name_2, strlen(name_2));
 
-        InsertOpcode(ir_nodes);
+        InsertOpcode(ir_block);
 
-        ir_nodes->offset += (ir_nodes - 1)->x64_instr_size + (ir_nodes - 1)->offset;
+        if (ir_func->position)
+                ir_block->offset += (ir_block - 1)->x64_instr_size + (ir_block - 1)->offset;
+        else
+                ir_block->offset = 0;
 
         return 0;
 }
 
-int InsertOpcode(IR_node* node)
+int InsertOpcode(IR_block* ir_block)
 {
         bool match = true;
         for (size_t instr_index = 0; instr_index < sizeof(table) / sizeof(IR_to_opcode); instr_index++)
         {
-                if (node->instr == table[instr_index].ir_instr)
+                if (ir_block->instr == table[instr_index].ir_instr)
                 {
                         const args_and_opcode* data_table = (const args_and_opcode*) table[instr_index].data;
 
@@ -90,19 +95,19 @@ int InsertOpcode(IR_node* node)
                         {
                                 match = true;
                                 
-                                match &= data_table[data_index].type_1 == node->type_1;                                
-                                match &= data_table[data_index].type_2 == node->type_2;
+                                match &= data_table[data_index].type_1 == ir_block->type_1;                                
+                                match &= data_table[data_index].type_2 == ir_block->type_2;
                                 
-                                if (node->type_1 != NUM_ARG && node->type_1 != LABEL_ARG && node->type_1 != MEM_ARG)
-                                        match &= data_table[data_index].arg_1 == node->arg_1.value;
+                                if (ir_block->type_1 != NUM_ARG && ir_block->type_1 != LABEL_ARG && ir_block->type_1 != MEM_ARG)
+                                        match &= data_table[data_index].arg_1 == ir_block->arg_1.value;
                                 
-                                if (node->type_2 != NUM_ARG && node->type_2 != MEM_ARG)
-                                        match &= data_table[data_index].arg_2  == node->arg_2.value;
+                                if (ir_block->type_2 != NUM_ARG && ir_block->type_2 != MEM_ARG)
+                                        match &= data_table[data_index].arg_2  == ir_block->arg_2.value;
 
                                 if (match)
                                 {
-                                        node->x64_instr_size = data_table[data_index].opcode_size;
-                                        memcpy(node->x64_instr, data_table[data_index].opcode, node->x64_instr_size);
+                                        ir_block->x64_instr_size = data_table[data_index].opcode_size;
+                                        memcpy(ir_block->x64_instr, data_table[data_index].opcode, ir_block->x64_instr_size);
                                         break;
                                 }
                         }
@@ -111,26 +116,26 @@ int InsertOpcode(IR_node* node)
         }
 
 
-        if (node->type_1 == NUM_ARG || node->type_1 == MEM_ARG)
+        if (ir_block->type_1 == NUM_ARG || ir_block->type_1 == MEM_ARG)
         {
-                int dec_number = node->arg_1.value;
+                int dec_number = ir_block->arg_1.value;
                 unsigned char hex_number[sizeof(int)] = {};
                 
                 ConvertToHex(dec_number, (unsigned char*) hex_number);
 
-                size_t offset = node->x64_instr_size - sizeof(int);
-                memcpy(node->x64_instr + offset, hex_number, sizeof(int));
+                size_t offset = ir_block->x64_instr_size - sizeof(int);
+                memcpy(ir_block->x64_instr + offset, hex_number, sizeof(int));
         }
 
-        if (node->type_2 == NUM_ARG)
+        if (ir_block->type_2 == NUM_ARG)
         {
-                int dec_number = node->arg_2.value;
+                int dec_number = ir_block->arg_2.value;
                 unsigned char hex_number[sizeof(int)] = {};
                 
                 ConvertToHex(dec_number, (unsigned char*) hex_number);
 
-                size_t offset = node->x64_instr_size - sizeof(int);
-                memcpy(node->x64_instr + offset, hex_number, sizeof(int));
+                size_t offset = ir_block->x64_instr_size - sizeof(int);
+                memcpy(ir_block->x64_instr + offset, hex_number, sizeof(int));
         }
 
         return 0;
@@ -147,21 +152,21 @@ int ConvertToHex(int dec_number, unsigned char* hex_number)
         return 0;
 }
 
-int PatchIR(IR_Function* funcs, err_allocator* err_alloc)
+int PatchIR(IR_Function* ir_funcs, err_allocator* err_alloc)
 {
         Label func_labels[MAX_FUNC_NUM] = {};
 
         size_t func_num = 0;
 
-        for (; func_num < MAX_FUNC_NUM && funcs[func_num].size != 0; func_num++)
+        for (; func_num < MAX_FUNC_NUM && ir_funcs[func_num].size != 0; func_num++)
         {
-                Label* start_label = funcs[func_num].label;
+                Label* start_label = ir_funcs[func_num].label;
 
                 strcpy(func_labels[func_num].label_name, start_label->label_name);
-                func_labels[func_num].offset = start_label->offset + funcs[func_num].offset_from_start;
+                func_labels[func_num].offset = start_label->offset + ir_funcs[func_num].offset_from_start;
         }
 
-        IR_Function* last_func = funcs + func_num - 1;
+        IR_Function* last_func = ir_funcs + func_num - 1;
 
         Label* in_label  = func_labels + func_num;
         Label* out_label = func_labels + func_num + 1;
@@ -176,7 +181,7 @@ int PatchIR(IR_Function* funcs, err_allocator* err_alloc)
 
         for (size_t func_index = 0; func_index < func_num; func_index++)
         {
-                PatchJumps(funcs + func_index, func_labels, func_num, err_alloc);
+                PatchJumps(ir_funcs + func_index, func_labels, func_num, err_alloc);
         }
 
         return 0;
@@ -186,11 +191,11 @@ int PatchJumps(IR_Function* func, Label* func_labels, size_t func_num, err_alloc
 {
         for (size_t instr_index = 0; instr_index < func->size; instr_index++)
         {
-                IR_node* node = func->instrs + instr_index;
+                IR_block* ir_block = func->instrs + instr_index;
                 
                 size_t offset = 0;
-                offset += GetOffsetConditionalJumps(node, func, err_alloc);
-                offset += GetOffsetGlobalCalls(node, func_labels, func_num, func->offset_from_start, err_alloc);
+                offset += GetOffsetConditionalJumps(ir_block, func, err_alloc);
+                offset += GetOffsetGlobalCalls(ir_block, func_labels, func_num, func->offset_from_start, err_alloc);
 
                 if (err_alloc->need_call)
                 {
@@ -201,24 +206,24 @@ int PatchJumps(IR_Function* func, Label* func_labels, size_t func_num, err_alloc
                 {
                         unsigned char hex_number[sizeof(int)] = {};
                         ConvertToHex((int) offset, hex_number);
-                        size_t offset_index = node->x64_instr_size - sizeof(int);
+                        size_t offset_index = ir_block->x64_instr_size - sizeof(int);
 
-                        memcpy(node->x64_instr + offset_index, hex_number, sizeof(int));
+                        memcpy(ir_block->x64_instr + offset_index, hex_number, sizeof(int));
                 }
         }
 
         return 0;
 }
 
-size_t GetOffsetConditionalJumps(IR_node* node, IR_Function* func, err_allocator* err_alloc)
+size_t GetOffsetConditionalJumps(IR_block* ir_block, IR_Function* func, err_allocator* err_alloc)
 {
-        if (node->instr == IR_JE || node->instr == IR_JNE || node->instr == IR_JAE || node->instr == IR_JBE || node->instr == IR_JMP)
+        if (ir_block->instr == IR_JE || ir_block->instr == IR_JNE || ir_block->instr == IR_JAE || ir_block->instr == IR_JBE || ir_block->instr == IR_JMP)
         {
                 for (size_t label_index = 0; label_index < func->label_num; label_index++)
                 {
-                        if (strcmp(func->label[label_index].label_name, node->arg_1.name) == 0)
+                        if (strcmp(func->label[label_index].label_name, ir_block->arg_1.name) == 0)
                         {
-                                size_t offset = func->label[label_index].offset - (node->offset + node->x64_instr_size);
+                                size_t offset = func->label[label_index].offset - (ir_block->offset + ir_block->x64_instr_size);
                                 return offset;
                         }
                 }
@@ -230,15 +235,15 @@ size_t GetOffsetConditionalJumps(IR_node* node, IR_Function* func, err_allocator
         return 0;
 }
 
-size_t GetOffsetGlobalCalls(IR_node* node, Label* func_labels, size_t func_num, size_t func_offset, err_allocator* err_alloc)
+size_t GetOffsetGlobalCalls(IR_block* ir_block, Label* func_labels, size_t func_num, size_t func_offset, err_allocator* err_alloc)
 {
-        if (node->instr == IR_CALL)
+        if (ir_block->instr == IR_CALL)
         {
                 for (size_t func_index = 0; func_index < func_num; func_index++)
                 {
-                        if (strcmp(node->arg_1.name, func_labels[func_index].label_name) == 0)
+                        if (strcmp(ir_block->arg_1.name, func_labels[func_index].label_name) == 0)
                         {
-                                size_t offset = func_labels[func_index].offset - (node->offset + node->x64_instr_size + func_offset);
+                                size_t offset = func_labels[func_index].offset - (ir_block->offset + ir_block->x64_instr_size + func_offset);
                                 return offset;
                         }
                 }
@@ -253,29 +258,29 @@ size_t GetOffsetGlobalCalls(IR_node* node, Label* func_labels, size_t func_num, 
 
 int CompleteProgramExit(IR_Function* func)
 {
-        InsertIRnode(func->instrs + func->position, IR_PUSH, NUM_ARG, 60, NULL, NO_ARG, 0, NULL);
+        InsertIRblock(func, IR_PUSH, NUM_ARG, 60, NULL, NO_ARG, 0, NULL);
         func->position++;
 
         char rax[] = "rax";
         char rdi[] = "rdi";
 
-        InsertIRnode(func->instrs + func->position, IR_POP, REG_ARG, 1, rax, NO_ARG, 0, NULL);
+        InsertIRblock(func, IR_POP, REG_ARG, 1, rax, NO_ARG, 0, NULL);
         func->position++;
 
-        InsertIRnode(func->instrs + func->position, IR_PUSH, NUM_ARG, 0, NULL, NO_ARG, 0, NULL);
+        InsertIRblock(func, IR_PUSH, NUM_ARG, 0, NULL, NO_ARG, 0, NULL);
         func->position++;
 
-        InsertIRnode(func->instrs + func->position, IR_POP, REG_ARG, 7, rdi, NO_ARG, 0, NULL);
+        InsertIRblock(func, IR_POP, REG_ARG, 7, rdi, NO_ARG, 0, NULL);
         func->position++;
 
-        InsertIRnode(func->instrs + func->position, IR_SYSCALL, NO_ARG, 0, NULL, NO_ARG, 0, NULL);
+        InsertIRblock(func, IR_SYSCALL, NO_ARG, 0, NULL, NO_ARG, 0, NULL);
         func->position++;
 
         return 0;
 }
 
 
-int ConvertIR(IR_Function* funcs, Tree** trees, err_allocator* err_alloc)
+int ConvertIR(IR_Function* ir_funcs, Tree** trees, err_allocator* err_alloc)
 {
         size_t func_num = 0;
         for (;func_num < NUM_TREE && trees[func_num] != NULL; func_num++)
@@ -283,7 +288,7 @@ int ConvertIR(IR_Function* funcs, Tree** trees, err_allocator* err_alloc)
 
         func_num--;
                 
-        IR_Function* main = funcs;
+        IR_Function* main = ir_funcs;
 
         main->instrs[main->position].instr = IR_NOP;
         main->instrs[main->position].x64_instr[0] = 0x90;
@@ -293,11 +298,11 @@ int ConvertIR(IR_Function* funcs, Tree** trees, err_allocator* err_alloc)
         char r10[] = "r10";
         char RAM_PTR[] = "RAM_PTR";
 
-        InsertIRnode(main->instrs + main->position, IR_MOV, REG_ARG, 10, r10, MEM_ARG, 0, RAM_PTR);
+        InsertIRblock(main, IR_MOV, REG_ARG, 10, r10, MEM_ARG, 0, RAM_PTR);
         main->position++;
 
 
-        CompleteFunctionIR(funcs, trees[func_num]->root, err_alloc);
+        CompleteFunctionIR(ir_funcs, trees[func_num]->root, err_alloc);
         if (err_alloc->need_call == true)
         {
                 INSERT_ERROR_NODE(err_alloc, "invalid executing CompleteFunctionIR");
@@ -309,7 +314,7 @@ int ConvertIR(IR_Function* funcs, Tree** trees, err_allocator* err_alloc)
         size_t pos = main->position;
         main->size = pos;
 
-        IR_node* last = main->instrs + pos - 1;
+        IR_block* last = main->instrs + pos - 1;
 
         main->bytes = last->offset + last->x64_instr_size;
         main->position = 0;
@@ -319,7 +324,7 @@ int ConvertIR(IR_Function* funcs, Tree** trees, err_allocator* err_alloc)
 
         for (size_t func_index = 0; func_index < func_num; func_index++)
         {
-                IR_Function* func = funcs + func_index + 1;
+                IR_Function* func = ir_funcs + func_index + 1;
 
                 CompleteFunctionIR(func, trees[func_index]->root, err_alloc);
                 if (err_alloc->need_call == true)
@@ -340,17 +345,17 @@ int ConvertIR(IR_Function* funcs, Tree** trees, err_allocator* err_alloc)
                 offset_from_start += func->bytes;
         }
 
-        PatchIR(funcs, err_alloc);
+        PatchIR(ir_funcs, err_alloc);
 
         return 0;
 }
 
-int CompleteFunctionIR(IR_Function* funcs, Node* node, err_allocator* err_alloc)
+int CompleteFunctionIR(IR_Function* ir_func, Node* node, err_allocator* err_alloc)
 {
-        funcs->instrs[funcs->position].instr = IR_NOP;
-        funcs->instrs[funcs->position].x64_instr[0] = 0x90;
-        funcs->instrs[funcs->position].x64_instr_size = 1;
-        funcs->position++;
+        ir_func->instrs[ir_func->position].instr = IR_NOP;
+        ir_func->instrs[ir_func->position].x64_instr[0] = 0x90;
+        ir_func->instrs[ir_func->position].x64_instr_size = 1;
+        ir_func->position++;
 
         if (node->type == FUNCTION)
         {
@@ -358,18 +363,18 @@ int CompleteFunctionIR(IR_Function* funcs, Node* node, err_allocator* err_alloc)
                 int id_fun = (int) node->data.id_fun;
                 sprintf(buf, "func_%d", id_fun);
 
-                InsertIRnode(funcs->instrs + funcs->position, IR_DEFINE, LABEL_ARG, id_fun, buf, NO_ARG, 0, NULL);
+                InsertIRblock(ir_func, IR_DEFINE, LABEL_ARG, id_fun, buf, NO_ARG, 0, NULL);
                 
-                memcpy(funcs->label[funcs->label_num].label_name, buf, strlen(buf));
-                funcs->label[funcs->label_num].offset = funcs->instrs[funcs->position].offset;
-                funcs->label_num++;
+                memcpy(ir_func->label[ir_func->label_num].label_name, buf, strlen(buf));
+                ir_func->label[ir_func->label_num].offset = ir_func->instrs[ir_func->position].offset;
+                ir_func->label_num++;
 
-                funcs->position++;
+                ir_func->position++;
 
                 if (!node->right)
-                        CompleteOperatorsIR(funcs, node->left, err_alloc);
+                        CompleteOperatorsIR(ir_func, node->left, err_alloc);
                 else
-                        CompleteOperatorsIR(funcs, node->right, err_alloc);
+                        CompleteOperatorsIR(ir_func, node->right, err_alloc);
         }
 
 
@@ -378,7 +383,7 @@ int CompleteFunctionIR(IR_Function* funcs, Node* node, err_allocator* err_alloc)
         return 0;
 }
 
-int CompletePushArgumentsIR(IR_Function* funcs, Node* node, int* arg_num, err_allocator* err_alloc)
+int CompletePushArgumentsIR(IR_Function* ir_func, Node* node, int* arg_num, err_allocator* err_alloc)
 {
         if (!node) return 0;
 
@@ -390,20 +395,20 @@ int CompletePushArgumentsIR(IR_Function* funcs, Node* node, int* arg_num, err_al
 
         if (is_comma)
         {
-                CompletePushArgumentsIR(funcs, node->right, arg_num, err_alloc);
-                CompletePushArgumentsIR(funcs, node->left, arg_num, err_alloc);
+                CompletePushArgumentsIR(ir_func, node->right, arg_num, err_alloc);
+                CompletePushArgumentsIR(ir_func, node->left, arg_num, err_alloc);
 
         }
         else if (!is_comma)
         {
-                CompleteExpressionIR(funcs, node, err_alloc);
+                CompleteExpressionIR(ir_func, node, err_alloc);
                 (*arg_num)++;
         }
 
         return 0;
 }
 
-void CompleteOperatorsIR(IR_Function* funcs, Node* node, err_allocator* err_alloc)
+void CompleteOperatorsIR(IR_Function* ir_func, Node* node, err_allocator* err_alloc)
 {
         if (!node) {return;}
 
@@ -411,28 +416,28 @@ void CompleteOperatorsIR(IR_Function* funcs, Node* node, err_allocator* err_allo
         {
                 if (node->data.id_op == SEMICOLON)
                 {
-                        CompleteOperatorsIR(funcs, node->left, err_alloc);
-                        CompleteOperatorsIR(funcs, node->right, err_alloc);
+                        CompleteOperatorsIR(ir_func, node->left, err_alloc);
+                        CompleteOperatorsIR(ir_func, node->right, err_alloc);
                 }
                 else if (node->data.id_op == OP_ASSIGN)
                 {
-                        CompleteAssignIR(funcs, node, err_alloc);
+                        CompleteAssignIR(ir_func, node, err_alloc);
                 }
                 else if (node->data.id_op == OP_LOOP)
                 {
-                        CompleteLoopIR(funcs, node, err_alloc);
+                        CompleteLoopIR(ir_func, node, err_alloc);
                 }
                 else if (node->data.id_op == OP_CONDITION)
                 {
-                        CompleteIfIR(funcs, node, err_alloc);
+                        CompleteIfIR(ir_func, node, err_alloc);
                 }
                 else if (node->data.id_op == RET)
                 {
-                        CompleteReturnIR(funcs, node, err_alloc);
+                        CompleteReturnIR(ir_func, node, err_alloc);
                 }
                 else if ((node->data.id_op == INPUT) || (node->data.id_op == OUTPUT))
                 {
-                        CompleteInOutPutIR(funcs, node, err_alloc);
+                        CompleteInOutPutIR(ir_func, node, err_alloc);
                 }
                 else 
                 {
@@ -451,7 +456,7 @@ void CompleteOperatorsIR(IR_Function* funcs, Node* node, err_allocator* err_allo
         return;
 }
 
-void CompleteReturnIR(IR_Function* funcs, Node* node, err_allocator* err_alloc)
+void CompleteReturnIR(IR_Function* ir_func, Node* node, err_allocator* err_alloc)
 {
         if (node->data.id_op != RET)
         {
@@ -461,32 +466,32 @@ void CompleteReturnIR(IR_Function* funcs, Node* node, err_allocator* err_alloc)
         }
 
         if (node->left)
-                CompleteExpressionIR(funcs, node->left, err_alloc);
+                CompleteExpressionIR(ir_func, node->left, err_alloc);
         else if (node->right)
-                CompleteExpressionIR(funcs, node->right, err_alloc);
+                CompleteExpressionIR(ir_func, node->right, err_alloc);
 
         char r8[] = "r8";
         char r9[] = "r9";
         
-        InsertIRnode(funcs->instrs + funcs->position, IR_POP, REG_ARG, 8, r8, NO_ARG, 0, NULL);
-        funcs->position++;
+        InsertIRblock(ir_func, IR_POP, REG_ARG, 8, r8, NO_ARG, 0, NULL);
+        ir_func->position++;
 
-        InsertIRnode(funcs->instrs + funcs->position, IR_POP, REG_ARG, 9, r9, NO_ARG, 0, NULL);
-        funcs->position++;
+        InsertIRblock(ir_func, IR_POP, REG_ARG, 9, r9, NO_ARG, 0, NULL);
+        ir_func->position++;
 
-        InsertIRnode(funcs->instrs + funcs->position, IR_PUSH, REG_ARG, 8, r8, NO_ARG, 0, NULL);
-        funcs->position++;
+        InsertIRblock(ir_func, IR_PUSH, REG_ARG, 8, r8, NO_ARG, 0, NULL);
+        ir_func->position++;
 
-        InsertIRnode(funcs->instrs + funcs->position, IR_PUSH, REG_ARG, 9, r9, NO_ARG, 0, NULL);
-        funcs->position++;
+        InsertIRblock(ir_func, IR_PUSH, REG_ARG, 9, r9, NO_ARG, 0, NULL);
+        ir_func->position++;
 
-        InsertIRnode(funcs->instrs + funcs->position, IR_RET, NO_ARG, 0, NULL, NO_ARG, 0, NULL);
-        funcs->position++;
+        InsertIRblock(ir_func, IR_RET, NO_ARG, 0, NULL, NO_ARG, 0, NULL);
+        ir_func->position++;
 
         return;
 }
 
-void CompleteInOutPutIR(IR_Function* funcs, Node* node, err_allocator* err_alloc)
+void CompleteInOutPutIR(IR_Function* ir_func, Node* node, err_allocator* err_alloc)
 {
         char buf[BUFFER_SIZE] = {};
         int id_var = 0;
@@ -504,27 +509,27 @@ void CompleteInOutPutIR(IR_Function* funcs, Node* node, err_allocator* err_alloc
         {
                 char my_input[] = "my_input";
         
-                InsertIRnode(funcs->instrs + funcs->position, IR_CALL, LABEL_ARG, 0, my_input, NO_ARG, 0, NULL);
-                funcs->position++;
+                InsertIRblock(ir_func, IR_CALL, LABEL_ARG, 0, my_input, NO_ARG, 0, NULL);
+                ir_func->position++;
                 
-                InsertIRnode(funcs->instrs + funcs->position, IR_PUSH, REG_ARG, 1, rax, NO_ARG, 0, NULL);
-                funcs->position++;
+                InsertIRblock(ir_func, IR_PUSH, REG_ARG, 1, rax, NO_ARG, 0, NULL);
+                ir_func->position++;
 
-                InsertIRnode(funcs->instrs + funcs->position, IR_POP, MEM_ARG, 8 * id_var, buf, NO_ARG, 0, NULL);
-                funcs->position++;
+                InsertIRblock(ir_func, IR_POP, MEM_ARG, 8 * id_var, buf, NO_ARG, 0, NULL);
+                ir_func->position++;
         }       
         else if (node->data.id_op == OUTPUT)
         {
                 char my_output[] = "my_output";
 
-                InsertIRnode(funcs->instrs + funcs->position, IR_PUSH, MEM_ARG, 8 * id_var, buf, NO_ARG, 0, NULL);
-                funcs->position++;
+                InsertIRblock(ir_func, IR_PUSH, MEM_ARG, 8 * id_var, buf, NO_ARG, 0, NULL);
+                ir_func->position++;
 
-                InsertIRnode(funcs->instrs + funcs->position, IR_POP, REG_ARG, 1, rax, NO_ARG, 0, NULL);
-                funcs->position++;
+                InsertIRblock(ir_func, IR_POP, REG_ARG, 1, rax, NO_ARG, 0, NULL);
+                ir_func->position++;
                 
-                InsertIRnode(funcs->instrs + funcs->position, IR_CALL, LABEL_ARG, 0, my_output, NO_ARG, 0, NULL);
-                funcs->position++;
+                InsertIRblock(ir_func, IR_CALL, LABEL_ARG, 0, my_output, NO_ARG, 0, NULL);
+                ir_func->position++;
         }
         else
         {
@@ -537,7 +542,7 @@ void CompleteInOutPutIR(IR_Function* funcs, Node* node, err_allocator* err_alloc
 }
 
 
-void CompleteAssignIR(IR_Function* funcs, Node* node, err_allocator* err_alloc)
+void CompleteAssignIR(IR_Function* ir_func, Node* node, err_allocator* err_alloc)
 {
         size_t id_var = 0;
         if (node->left->type == VARIABLE)
@@ -551,37 +556,37 @@ void CompleteAssignIR(IR_Function* funcs, Node* node, err_allocator* err_alloc)
                 return;
         }
 
-        if (funcs->var_num < id_var + 1)
-                funcs->var_num = id_var + 1;
+        if (ir_func->var_num < id_var + 1)
+                ir_func->var_num = id_var + 1;
          
-        CompleteExpressionIR(funcs, node->right, err_alloc); 
+        CompleteExpressionIR(ir_func, node->right, err_alloc); 
 
         char buf[BUFFER_SIZE] = {};
         sprintf(buf, "[r10 + %d]", (int) (8 * id_var));
 
-        InsertIRnode(funcs->instrs + funcs->position, IR_POP, MEM_ARG, (int) (8 * id_var), buf, NO_ARG, 0, NULL);
-        funcs->position++;
+        InsertIRblock(ir_func, IR_POP, MEM_ARG, (int) (8 * id_var), buf, NO_ARG, 0, NULL);
+        ir_func->position++;
 
         return;
 }
 
 
-IR_Instruction CompleteBoolExpressionIR(IR_Function* funcs, Node* node, err_allocator* err_alloc)
+IR_Instruction CompleteBoolExpressionIR(IR_Function* ir_func, Node* node, err_allocator* err_alloc)
 {
-        CompleteExpressionIR(funcs, node->left, err_alloc);
-        CompleteExpressionIR(funcs, node->right, err_alloc);
+        CompleteExpressionIR(ir_func, node->left, err_alloc);
+        CompleteExpressionIR(ir_func, node->right, err_alloc);
 
         char r11[] = "r11";
         char r12[] = "r12";
 
-        InsertIRnode(funcs->instrs + funcs->position, IR_POP, REG_ARG, 11, r11, NO_ARG, 0, NULL);
-        funcs->position++;
+        InsertIRblock(ir_func, IR_POP, REG_ARG, 11, r11, NO_ARG, 0, NULL);
+        ir_func->position++;
 
-        InsertIRnode(funcs->instrs + funcs->position, IR_POP, REG_ARG, 12, r12, NO_ARG, 0, NULL);
-        funcs->position++;
+        InsertIRblock(ir_func, IR_POP, REG_ARG, 12, r12, NO_ARG, 0, NULL);
+        ir_func->position++;
 
-        InsertIRnode(funcs->instrs + funcs->position, IR_CMP, REG_ARG, 11, r11, REG_ARG, 12, r12);
-        funcs->position++;
+        InsertIRblock(ir_func, IR_CMP, REG_ARG, 11, r11, REG_ARG, 12, r12);
+        ir_func->position++;
 
         if (node->data.id_op == OP_ABOVE)
                 return IR_JBE;
@@ -601,7 +606,7 @@ IR_Instruction CompleteBoolExpressionIR(IR_Function* funcs, Node* node, err_allo
         return IR_NOP;
 }
 
-void CompleteExpressionIR(IR_Function* funcs, Node* node, err_allocator* err_alloc)
+void CompleteExpressionIR(IR_Function* ir_func, Node* node, err_allocator* err_alloc)
 {
         if (!node) return;
 
@@ -612,20 +617,20 @@ void CompleteExpressionIR(IR_Function* funcs, Node* node, err_allocator* err_all
                 char rax[] = "rax";
 
                 if (node->left)
-                        CompleteExpressionIR(funcs, node->left, err_alloc);
+                        CompleteExpressionIR(ir_func, node->left, err_alloc);
                 if (node->right) 
-                        CompleteExpressionIR(funcs, node->right, err_alloc);
+                        CompleteExpressionIR(ir_func, node->right, err_alloc);
                 
                 if (node->right)
                 {
-                        InsertIRnode(funcs->instrs + funcs->position, IR_POP, REG_ARG, 12, r12, NO_ARG, 0, NULL);
-                        funcs->position++;
+                        InsertIRblock(ir_func, IR_POP, REG_ARG, 12, r12, NO_ARG, 0, NULL);
+                        ir_func->position++;
                 }
 
                 if (node->left)
                 {
-                        InsertIRnode(funcs->instrs + funcs->position, IR_POP, REG_ARG, 11, r11, NO_ARG, 0, NULL);
-                        funcs->position++;
+                        InsertIRblock(ir_func, IR_POP, REG_ARG, 11, r11, NO_ARG, 0, NULL);
+                        ir_func->position++;
                 } 
                 
                 IR_Instruction instr_id = IR_NOP;
@@ -647,50 +652,50 @@ void CompleteExpressionIR(IR_Function* funcs, Node* node, err_allocator* err_all
 
                 if (instr_id == IR_ADD || instr_id == IR_SUB)
                 {
-                        InsertIRnode(funcs->instrs + funcs->position, instr_id, REG_ARG, 11, r11, REG_ARG, 12, r12);
-                        funcs->position++;
+                        InsertIRblock(ir_func, instr_id, REG_ARG, 11, r11, REG_ARG, 12, r12);
+                        ir_func->position++;
 
-                        InsertIRnode(funcs->instrs + funcs->position, IR_PUSH, REG_ARG, 11, r11, NO_ARG, 0, NULL);
-                        funcs->position++;
+                        InsertIRblock(ir_func, IR_PUSH, REG_ARG, 11, r11, NO_ARG, 0, NULL);
+                        ir_func->position++;
                 }
                 else if (instr_id == IR_MUL || instr_id == IR_DIV)
                 {
-                        InsertIRnode(funcs->instrs + funcs->position, IR_MOV, REG_ARG, 1, rax, REG_ARG, 11, r11);
-                        funcs->position++;
+                        InsertIRblock(ir_func, IR_MOV, REG_ARG, 1, rax, REG_ARG, 11, r11);
+                        ir_func->position++;
 
-                        InsertIRnode(funcs->instrs + funcs->position, instr_id, REG_ARG, 12, r12, NO_ARG, 0, NULL);
-                        funcs->position++;
+                        InsertIRblock(ir_func, instr_id, REG_ARG, 12, r12, NO_ARG, 0, NULL);
+                        ir_func->position++;
 
-                        InsertIRnode(funcs->instrs + funcs->position, IR_PUSH, REG_ARG, 1, rax, NO_ARG, 0, NULL);
-                        funcs->position++;
+                        InsertIRblock(ir_func, IR_PUSH, REG_ARG, 1, rax, NO_ARG, 0, NULL);
+                        ir_func->position++;
                 }
         }
         else if (node->type == VARIABLE)
         {
                 size_t id_var = node->data.id_var;
-                if (funcs->var_num < id_var + 1)
-                        funcs->var_num = id_var + 1;
+                if (ir_func->var_num < id_var + 1)
+                        ir_func->var_num = id_var + 1;
 
                 char buf[BUFFER_SIZE] = {};
                 sprintf(buf, "[r10 + %lu]", 8 * id_var);
 
-                InsertIRnode(funcs->instrs + funcs->position, IR_PUSH, MEM_ARG, (int) (8 * id_var), buf, NO_ARG, 0, NULL);
-                funcs->position++;
+                InsertIRblock(ir_func, IR_PUSH, MEM_ARG, (int) (8 * id_var), buf, NO_ARG, 0, NULL);
+                ir_func->position++;
         }
         else if (node->type == FUNCTION)
         {
                 int arg_num = 0;
                 if (node->left)
-                        CompletePushArgumentsIR(funcs, node->left, &arg_num, err_alloc);
+                        CompletePushArgumentsIR(ir_func, node->left, &arg_num, err_alloc);
                 if (node->right)
-                        CompletePushArgumentsIR(funcs, node->right, &arg_num, err_alloc);
+                        CompletePushArgumentsIR(ir_func, node->right, &arg_num, err_alloc);
                 
-                int num_vars = (int) funcs->var_num;
+                int num_vars = (int) ir_func->var_num;
 
                 char r10[] = "r10";
                 
-                InsertIRnode(funcs->instrs + funcs->position, IR_ADD, REG_ARG, 10, r10, NUM_ARG, 8 * num_vars, NULL);        
-                funcs->position++;
+                InsertIRblock(ir_func, IR_ADD, REG_ARG, 10, r10, NUM_ARG, 8 * num_vars, NULL);        
+                ir_func->position++;
 
                 char buf[BUFFER_SIZE] = {};
 
@@ -698,23 +703,23 @@ void CompleteExpressionIR(IR_Function* funcs, Node* node, err_allocator* err_all
                 {
                         sprintf(buf, "[r10 + %d]", 8 * arg_i);
 
-                        InsertIRnode(funcs->instrs + funcs->position, IR_POP, MEM_ARG, 8 * arg_i, buf, NO_ARG, 0, NULL);
-                        funcs->position++;
+                        InsertIRblock(ir_func, IR_POP, MEM_ARG, 8 * arg_i, buf, NO_ARG, 0, NULL);
+                        ir_func->position++;
                 }
 
                 int id_fun = (int) node->data.id_fun;
                 sprintf(buf, "func_%d", id_fun);
 
-                InsertIRnode(funcs->instrs + funcs->position, IR_CALL, LABEL_ARG, id_fun, buf, NO_ARG, 0, NULL);
-                funcs->position++;
+                InsertIRblock(ir_func, IR_CALL, LABEL_ARG, id_fun, buf, NO_ARG, 0, NULL);
+                ir_func->position++;
                 
-                InsertIRnode(funcs->instrs + funcs->position, IR_SUB, REG_ARG, 10, r10, NUM_ARG, 8 * num_vars, NULL);
-                funcs->position++;
+                InsertIRblock(ir_func, IR_SUB, REG_ARG, 10, r10, NUM_ARG, 8 * num_vars, NULL);
+                ir_func->position++;
         }
         else if (node->type == NUMBER)
         {   
-                InsertIRnode(funcs->instrs + funcs->position, IR_PUSH, NUM_ARG, (int) node->data.value, NULL, NO_ARG, 0, NULL);
-                funcs->position++;
+                InsertIRblock(ir_func, IR_PUSH, NUM_ARG, (int) node->data.value, NULL, NO_ARG, 0, NULL);
+                ir_func->position++;
         }
 
         
@@ -722,61 +727,61 @@ void CompleteExpressionIR(IR_Function* funcs, Node* node, err_allocator* err_all
 }
 
 
-void CompleteLoopIR(IR_Function* funcs, Node* node, err_allocator* err_alloc)
+void CompleteLoopIR(IR_Function* ir_func, Node* node, err_allocator* err_alloc)
 {
         char start_buf[BUFFER_SIZE] = {};
         char end_buf[BUFFER_SIZE] = {};
         
-        sprintf(start_buf, ".while_%lu", funcs->while_num);
-        sprintf(end_buf, ".end_while_%lu", funcs->while_num);
+        sprintf(start_buf, ".while_%lu", ir_func->while_num);
+        sprintf(end_buf, ".end_while_%lu", ir_func->while_num);
 
-        InsertIRnode(funcs->instrs + funcs->position, IR_LABEL, LABEL_ARG, 0, start_buf, NO_ARG, 0, NULL);
-        memcpy(funcs->label[funcs->label_num].label_name, start_buf, strlen(start_buf));
-        funcs->label[funcs->label_num].offset = funcs->instrs[funcs->position].offset;
-        funcs->label_num++;
-        funcs->position++;
+        InsertIRblock(ir_func, IR_LABEL, LABEL_ARG, 0, start_buf, NO_ARG, 0, NULL);
+        memcpy(ir_func->label[ir_func->label_num].label_name, start_buf, strlen(start_buf));
+        ir_func->label[ir_func->label_num].offset = ir_func->instrs[ir_func->position].offset;
+        ir_func->label_num++;
+        ir_func->position++;
 
-        IR_Instruction instr_id = CompleteBoolExpressionIR(funcs, node->left, err_alloc);
+        IR_Instruction instr_id = CompleteBoolExpressionIR(ir_func, node->left, err_alloc);
 
-        InsertIRnode(funcs->instrs + funcs->position, instr_id, LABEL_ARG, 0, end_buf, NO_ARG, 0, NULL);
-        funcs->position++;
+        InsertIRblock(ir_func, instr_id, LABEL_ARG, 0, end_buf, NO_ARG, 0, NULL);
+        ir_func->position++;
         
-        CompleteOperatorsIR(funcs, node->right, err_alloc);
+        CompleteOperatorsIR(ir_func, node->right, err_alloc);
 
-        InsertIRnode(funcs->instrs + funcs->position, IR_JMP, LABEL_ARG, 0, start_buf, NO_ARG, 0, NULL);
-        funcs->position++;
+        InsertIRblock(ir_func, IR_JMP, LABEL_ARG, 0, start_buf, NO_ARG, 0, NULL);
+        ir_func->position++;
         
-        InsertIRnode(funcs->instrs + funcs->position, IR_LABEL, LABEL_ARG, 0, end_buf, NO_ARG, 0, NULL);
-        memcpy(funcs->label[funcs->label_num].label_name, end_buf, strlen(end_buf));
-        funcs->label[funcs->label_num].offset = funcs->instrs[funcs->position].offset;
-        funcs->label_num++;
-        funcs->position++;
+        InsertIRblock(ir_func, IR_LABEL, LABEL_ARG, 0, end_buf, NO_ARG, 0, NULL);
+        memcpy(ir_func->label[ir_func->label_num].label_name, end_buf, strlen(end_buf));
+        ir_func->label[ir_func->label_num].offset = ir_func->instrs[ir_func->position].offset;
+        ir_func->label_num++;
+        ir_func->position++;
 
-        funcs->while_num++;
+        ir_func->while_num++;
 
         return;   
 }
 
-void CompleteIfIR(IR_Function* funcs, Node* node, err_allocator* err_alloc)
+void CompleteIfIR(IR_Function* ir_func, Node* node, err_allocator* err_alloc)
 {
         char false_buf[BUFFER_SIZE] = {};
         
-        sprintf(false_buf, ".end_if_%lu", funcs->if_num);
+        sprintf(false_buf, ".end_if_%lu", ir_func->if_num);
 
-        IR_Instruction instr_id = CompleteBoolExpressionIR(funcs, node->left, err_alloc);
+        IR_Instruction instr_id = CompleteBoolExpressionIR(ir_func, node->left, err_alloc);
         
-        InsertIRnode(funcs->instrs + funcs->position, instr_id, LABEL_ARG, 0, false_buf, NO_ARG, 0, NULL);
-        funcs->position++;
+        InsertIRblock(ir_func, instr_id, LABEL_ARG, 0, false_buf, NO_ARG, 0, NULL);
+        ir_func->position++;
 
-        CompleteOperatorsIR(funcs, node->right, err_alloc); 
+        CompleteOperatorsIR(ir_func, node->right, err_alloc); 
         
-        InsertIRnode(funcs->instrs + funcs->position, IR_LABEL, LABEL_ARG, 0, false_buf, NO_ARG, 0, NULL);
-        memcpy(funcs->label[funcs->label_num].label_name, false_buf, strlen(false_buf));
-        funcs->label[funcs->label_num].offset = funcs->instrs[funcs->position].offset;
-        funcs->label_num++;
-        funcs->position++;
+        InsertIRblock(ir_func, IR_LABEL, LABEL_ARG, 0, false_buf, NO_ARG, 0, NULL);
+        memcpy(ir_func->label[ir_func->label_num].label_name, false_buf, strlen(false_buf));
+        ir_func->label[ir_func->label_num].offset = ir_func->instrs[ir_func->position].offset;
+        ir_func->label_num++;
+        ir_func->position++;
 
-        funcs->if_num++;
+        ir_func->if_num++;
         return;
 }
 
@@ -859,14 +864,14 @@ int DumpInstrName(IR_Instruction instr)
         return 0;
 }
 
-int DumpIR(IR_Function* funcs)
+int DumpIR(IR_Function* ir_func)
 {
-        IR_node* ir_instrs = NULL;
+        IR_block* ir_instrs = NULL;
         IR_Function* func  = NULL;
 
         for (size_t func_index = 0; func_index < MAX_FUNC_NUM; func_index++)
         {
-                func = funcs + func_index;
+                func = ir_func + func_index;
                 printf("\n");
 
                 for (size_t label_index = 0; label_index < func->label_num; label_index++)
@@ -969,8 +974,8 @@ int DumpIR(IR_Function* funcs)
 
 // int OptimizeIR(IR_Function* func)
 // {
-//         IR_node* ir_instr_1 = NULL;
-//         IR_node* ir_instr_2 = NULL;
+//         IR_block* ir_instr_1 = NULL;
+//         IR_block* ir_instr_2 = NULL;
 
 //         for (size_t instr_index = 0; instr_index < func->size; instr_index++)
 //         {
@@ -981,7 +986,7 @@ int DumpIR(IR_Function* funcs)
 //                 {
                         
 
-//                         // InsertIRnode(IR_MOV, /*somewhere*/, ir_instr_1->type_1, ir_instr_1->arg_1.value, ir_instr_1->arg_1.name, ir_instr_2->type_1, ir_instr_1->arg_2.value, ir_instr_2->arg_1.name)
+//                         // InsertIRblock(IR_MOV, /*somewhere*/, ir_instr_1->type_1, ir_instr_1->arg_1.value, ir_instr_1->arg_1.name, ir_instr_2->type_1, ir_instr_1->arg_2.value, ir_instr_2->arg_1.name)
 //                 }
 
 //                 if ((ir_instr_1->instr == IR_MOV) && (ir_instr_1->type_1 == ir_instr_1->type_2) && ((ir_instr_1->arg_2.value == ir_instr_1->arg_1.value)))
@@ -996,7 +1001,7 @@ int DumpIR(IR_Function* funcs)
 
 
 
-// int FindMostCommonVars(IR_Function* funcs, int* vars)
+// int FindMostCommonVars(IR_Function* ir_func, int* vars)
 // {
 //         // int occurrence_rate[100] = {};
 

@@ -26,12 +26,12 @@ int IRtoOpcode(IR_Function* funcs, Text* code, err_allocator* err_alloc)
         return 0;
 }
 
-int TranslateInstrToOpcode(IR_node* node, Text* code)
+int TranslateInstrToOpcode(IR_block* ir_block, Text* code)
 {       
-        if (node->x64_instr_size)
+        if (ir_block->x64_instr_size)
         {
-                memcpy(code->str + code->position, node->x64_instr, node->x64_instr_size);
-                code->position += node->x64_instr_size;
+                memcpy(code->str + code->position, ir_block->x64_instr, ir_block->x64_instr_size);
+                code->position += ir_block->x64_instr_size;
         }
         
         return 0;

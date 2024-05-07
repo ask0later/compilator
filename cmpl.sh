@@ -7,3 +7,4 @@ cd ..
 cd ELF_translator
 ./trans ../data_and_text/text_segment.txt ../data_and_text/data_segment.txt ../$1
 cd ..
+chmod +x $1
