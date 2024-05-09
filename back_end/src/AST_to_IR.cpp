@@ -264,7 +264,7 @@ int CompleteProgramExit(IR_Function* func)
         char rax[] = "rax";
         char rdi[] = "rdi";
 
-        InsertIRblock(func, IR_POP, REG_ARG, 1, rax, NO_ARG, 0, NULL);
+        InsertIRblock(func, IR_POP, REG_ARG, 0, rax, NO_ARG, 0, NULL);
         func->position++;
 
         InsertIRblock(func, IR_PUSH, NUM_ARG, 0, NULL, NO_ARG, 0, NULL);
@@ -291,11 +291,7 @@ int ConvertIR(IR_Function* ir_funcs, Tree** trees, err_allocator* err_alloc)
         IR_Function* main = ir_funcs;
 
         char r10[] = "r10";
-        char RAM_PTR[] = "RAM_PTR";
-
-        InsertIRblock(main, IR_MOV, REG_ARG, 10, r10, MEM_ARG, 0, RAM_PTR);
-        main->position++;
-
+        char rsp[] = "rsp";
 
         CompleteFunctionIR(ir_funcs, trees[func_num]->root, err_alloc);
         if (err_alloc->need_call == true)
@@ -303,6 +299,9 @@ int ConvertIR(IR_Function* ir_funcs, Tree** trees, err_allocator* err_alloc)
                 INSERT_ERROR_NODE(err_alloc, "invalid executing CompleteFunctionIR");
                 return 1;
         }
+
+        InsertIRblock(main, IR_MOV, REG_ARG, 4, rsp, REG_ARG, 10, r10);
+        main->position++;
 
         CompleteProgramExit(main);
         
@@ -349,6 +348,9 @@ int CompleteFunctionIR(IR_Function* ir_func, Node* node, err_allocator* err_allo
 {
         if (node->type == FUNCTION)
         {
+                char r10[] = "r10";
+                char rsp[] = "rsp";
+
                 char buf[BUFFER_SIZE] = {};
                 int id_fun = (int) node->data.id_fun;
                 sprintf(buf, "func_%d", id_fun);
@@ -361,12 +363,44 @@ int CompleteFunctionIR(IR_Function* ir_func, Node* node, err_allocator* err_allo
 
                 ir_func->position++;
 
+                InsertIRblock(ir_func, IR_MOV, REG_ARG, 10, r10, REG_ARG, 4, rsp);
+                ir_func->position++;
+
+                InsertIRblock(ir_func, IR_SUB, REG_ARG, 10, r10, NUM_ARG, 8, NULL);
+                ir_func->position++;
+
+
                 if (!node->right)
+                {
                         CompleteOperatorsIR(ir_func, node->left, err_alloc);
+                }
                 else
+                {       
+                        CompletePopArgumentsIR(ir_func, node->left, err_alloc);
                         CompleteOperatorsIR(ir_func, node->right, err_alloc);
+                }
         }
         
+        return 0;
+}
+
+int CompletePopArgumentsIR(IR_Function* ir_func, Node* node, err_allocator* err_alloc)
+{
+        if (!node) return 0;
+
+        if (node->type != VARIABLE)
+        {
+                CompletePopArgumentsIR(ir_func, node->right, err_alloc);
+                CompletePopArgumentsIR(ir_func, node->left, err_alloc);
+        }
+        else if (node->type == VARIABLE)
+        {
+                char rsp[] = "rsp";
+
+                InsertIRblock(ir_func, IR_SUB, REG_ARG, 4, rsp, NUM_ARG, 8, NULL);
+                ir_func->position++;
+        }
+
         return 0;
 }
 
@@ -384,7 +418,6 @@ int CompletePushArgumentsIR(IR_Function* ir_func, Node* node, int* arg_num, err_
         {
                 CompletePushArgumentsIR(ir_func, node->right, arg_num, err_alloc);
                 CompletePushArgumentsIR(ir_func, node->left, arg_num, err_alloc);
-
         }
         else if (!is_comma)
         {
@@ -459,9 +492,21 @@ void CompleteReturnIR(IR_Function* ir_func, Node* node, err_allocator* err_alloc
 
         char r8[] = "r8";
         char r9[] = "r9";
+
+        char r10[] = "r10";
+        char rsp[] = "rsp";
+
         
         InsertIRblock(ir_func, IR_POP, REG_ARG, 8, r8, NO_ARG, 0, NULL);
         ir_func->position++;
+
+        InsertIRblock(ir_func, IR_MOV, REG_ARG, 4, rsp, REG_ARG, 10, r10);
+        ir_func->position++;
+
+        InsertIRblock(ir_func, IR_ADD, REG_ARG, 4, rsp, NUM_ARG, 8, NULL);
+        ir_func->position++;
+
+
 
         InsertIRblock(ir_func, IR_POP, REG_ARG, 9, r9, NO_ARG, 0, NULL);
         ir_func->position++;
@@ -480,7 +525,6 @@ void CompleteReturnIR(IR_Function* ir_func, Node* node, err_allocator* err_alloc
 
 void CompleteInOutPutIR(IR_Function* ir_func, Node* node, err_allocator* err_alloc)
 {
-        char buf[BUFFER_SIZE] = {};
         int id_var = 0;
         
         if (node->left)
@@ -488,9 +532,9 @@ void CompleteInOutPutIR(IR_Function* ir_func, Node* node, err_allocator* err_all
         else if (node->right)
                 id_var = (int) node->right->data.id_var;
 
-        sprintf(buf, "[r10 + %d]", 8 * id_var);
-        
+        char r10[] = "r10";
         char rax[] = "rax";
+        char mem_r10[] = "[r10]";
 
         if (node->data.id_op == INPUT)
         {
@@ -499,20 +543,23 @@ void CompleteInOutPutIR(IR_Function* ir_func, Node* node, err_allocator* err_all
                 InsertIRblock(ir_func, IR_CALL, LABEL_ARG, 0, my_input, NO_ARG, 0, NULL);
                 ir_func->position++;
                 
-                InsertIRblock(ir_func, IR_PUSH, REG_ARG, 1, rax, NO_ARG, 0, NULL);
-                ir_func->position++;
-
-                InsertIRblock(ir_func, IR_POP, MEM_ARG, 8 * id_var, buf, NO_ARG, 0, NULL);
+                InsertIRblock(ir_func, IR_PUSH, REG_ARG, 0, rax, NO_ARG, 0, NULL);
                 ir_func->position++;
         }       
         else if (node->data.id_op == OUTPUT)
         {
                 char my_output[] = "my_output";
 
-                InsertIRblock(ir_func, IR_PUSH, MEM_ARG, 8 * id_var, buf, NO_ARG, 0, NULL);
+                InsertIRblock(ir_func, IR_SUB, REG_ARG, 10, r10, NUM_ARG, 8 * id_var, NULL);
                 ir_func->position++;
 
-                InsertIRblock(ir_func, IR_POP, REG_ARG, 1, rax, NO_ARG, 0, NULL);
+                InsertIRblock(ir_func, IR_PUSH, MEM_ARG, 0, mem_r10, NO_ARG, 0, NULL);
+                ir_func->position++;
+
+                InsertIRblock(ir_func, IR_ADD, REG_ARG, 10, r10, NUM_ARG, 8 * id_var, NULL);
+                ir_func->position++;
+
+                InsertIRblock(ir_func, IR_POP, REG_ARG, 0, rax, NO_ARG, 0, NULL);
                 ir_func->position++;
                 
                 InsertIRblock(ir_func, IR_CALL, LABEL_ARG, 0, my_output, NO_ARG, 0, NULL);
@@ -542,17 +589,31 @@ void CompleteAssignIR(IR_Function* ir_func, Node* node, err_allocator* err_alloc
                 err_alloc->need_call = true;
                 return;
         }
-
-        if (ir_func->var_num < id_var + 1)
-                ir_func->var_num = id_var + 1;
          
         CompleteExpressionIR(ir_func, node->right, err_alloc); 
 
-        char buf[BUFFER_SIZE] = {};
-        sprintf(buf, "[r10 + %d]", (int) (8 * id_var));
+        char r10[] = "r10";
+        char mem_r10[] = "[r10]";
 
-        InsertIRblock(ir_func, IR_POP, MEM_ARG, (int) (8 * id_var), buf, NO_ARG, 0, NULL);
+        InsertIRblock(ir_func, IR_SUB, REG_ARG, 10, r10, NUM_ARG, (int) (8 * id_var), NULL);
         ir_func->position++;
+
+        InsertIRblock(ir_func, IR_POP, MEM_ARG, 0, mem_r10, NO_ARG, 0, NULL);
+        ir_func->position++;
+
+        InsertIRblock(ir_func, IR_ADD, REG_ARG, 10, r10, NUM_ARG, (int) (8 * id_var), NULL);
+        ir_func->position++;
+
+        if (ir_func->var_num <= id_var)
+        {
+                char rsp[] = "rsp";
+
+                InsertIRblock(ir_func, IR_SUB, REG_ARG, 4, rsp, NUM_ARG, 8, NULL);
+                ir_func->position++;
+        }
+
+        if (ir_func->var_num < id_var + 1)
+                ir_func->var_num = id_var + 1;
 
         return;
 }
@@ -647,13 +708,13 @@ void CompleteExpressionIR(IR_Function* ir_func, Node* node, err_allocator* err_a
                 }
                 else if (instr_id == IR_MUL || instr_id == IR_DIV)
                 {
-                        InsertIRblock(ir_func, IR_MOV, REG_ARG, 1, rax, REG_ARG, 11, r11);
+                        InsertIRblock(ir_func, IR_MOV, REG_ARG, 0, rax, REG_ARG, 11, r11);
                         ir_func->position++;
 
                         InsertIRblock(ir_func, instr_id, REG_ARG, 12, r12, NO_ARG, 0, NULL);
                         ir_func->position++;
 
-                        InsertIRblock(ir_func, IR_PUSH, REG_ARG, 1, rax, NO_ARG, 0, NULL);
+                        InsertIRblock(ir_func, IR_PUSH, REG_ARG, 0, rax, NO_ARG, 0, NULL);
                         ir_func->position++;
                 }
         }
@@ -663,44 +724,56 @@ void CompleteExpressionIR(IR_Function* ir_func, Node* node, err_allocator* err_a
                 if (ir_func->var_num < id_var + 1)
                         ir_func->var_num = id_var + 1;
 
-                char buf[BUFFER_SIZE] = {};
-                sprintf(buf, "[r10 + %lu]", 8 * id_var);
+                char mem_r10[] = "[r10]";
+                char r10[] = "r10";
 
-                InsertIRblock(ir_func, IR_PUSH, MEM_ARG, (int) (8 * id_var), buf, NO_ARG, 0, NULL);
+                InsertIRblock(ir_func, IR_SUB, REG_ARG, 10, r10, NUM_ARG, (int) (8 * id_var), NULL);
+                ir_func->position++;
+
+                InsertIRblock(ir_func, IR_PUSH, MEM_ARG, 0, mem_r10, NO_ARG, 0, NULL);
+                ir_func->position++;
+
+                InsertIRblock(ir_func, IR_ADD, REG_ARG, 10, r10, NUM_ARG, (int) (8 * id_var), NULL);
                 ir_func->position++;
         }
         else if (node->type == FUNCTION)
         {
+                char r10[] = "r10";
+
+                InsertIRblock(ir_func, IR_PUSH, REG_ARG, 10, r10, NO_ARG, 0, NULL);
+                ir_func->position++;
+
+                InsertIRblock(ir_func, IR_PUSH, NUM_ARG, 0, NULL, NO_ARG, 0, NULL);
+                ir_func->position++;
+
                 int arg_num = 0;
                 if (node->left)
                         CompletePushArgumentsIR(ir_func, node->left, &arg_num, err_alloc);
                 if (node->right)
                         CompletePushArgumentsIR(ir_func, node->right, &arg_num, err_alloc);
                 
-                int num_vars = (int) ir_func->var_num;
+                char rsp[] = "rsp";
 
-                char r10[] = "r10";
-                
-                InsertIRblock(ir_func, IR_ADD, REG_ARG, 10, r10, NUM_ARG, 8 * num_vars, NULL);        
+                InsertIRblock(ir_func, IR_ADD, REG_ARG, 4, rsp, NUM_ARG, 8 * (arg_num + 1), NULL);
                 ir_func->position++;
 
+
                 char buf[BUFFER_SIZE] = {};
-
-                for (int arg_i = 0; arg_i < arg_num; arg_i++)
-                {
-                        sprintf(buf, "[r10 + %d]", 8 * arg_i);
-
-                        InsertIRblock(ir_func, IR_POP, MEM_ARG, 8 * arg_i, buf, NO_ARG, 0, NULL);
-                        ir_func->position++;
-                }
 
                 int id_fun = (int) node->data.id_fun;
                 sprintf(buf, "func_%d", id_fun);
 
                 InsertIRblock(ir_func, IR_CALL, LABEL_ARG, id_fun, buf, NO_ARG, 0, NULL);
                 ir_func->position++;
+
+                char r8[] = "r8";
+                InsertIRblock(ir_func, IR_POP, REG_ARG, 8, r8, NO_ARG, 0, NULL);
+                ir_func->position++;
                 
-                InsertIRblock(ir_func, IR_SUB, REG_ARG, 10, r10, NUM_ARG, 8 * num_vars, NULL);
+                InsertIRblock(ir_func, IR_POP, REG_ARG, 10, r10, NO_ARG, 0, NULL);
+                ir_func->position++;
+
+                InsertIRblock(ir_func, IR_PUSH, REG_ARG, 8, r8, NO_ARG, 0, NULL);
                 ir_func->position++;
         }
         else if (node->type == NUMBER)
@@ -777,72 +850,72 @@ void CompleteIfIR(IR_Function* ir_func, Node* node, err_allocator* err_alloc)
 // Dump
 
 
-int DumpInstrName(IR_Instruction instr)
+int DumpInstrName(IR_Instruction ir_instr, char* instr_buf)
 {
-        switch(instr)
+        switch(ir_instr)
         {
                 case IR_NOP:
-                        printf("NOP: ");    
+                        sprintf(instr_buf, " nop ");    
                         break;
                 case IR_MOV:
-                        printf("MOV: ");    
+                        sprintf(instr_buf, " mov ");    
                         break;    
                 case IR_ADD:
-                        printf("ADD: ");    
+                        sprintf(instr_buf, " add ");    
                         break; 
                 case IR_SUB:
-                        printf("SUB: ");    
+                        sprintf(instr_buf, " sub ");    
                         break;        
                 case IR_MUL:
-                        printf("MUL: ");    
+                        sprintf(instr_buf, " mul ");    
                         break;        
                 case IR_DIV:    
-                        printf("DIV: ");
+                        sprintf(instr_buf, " div ");
                         break;        
                 case IR_INPUT:  
-                        printf("INPUT: ");
+                        sprintf(instr_buf, "INPUT: ");
                         break;        
                 case IR_OUTPUT: 
-                        printf("OUTPUT: ");
+                        sprintf(instr_buf, "OUTPUT: ");
                         break;
                 case IR_JMP:    
-                        printf("JMP: ");
+                        sprintf(instr_buf, " jmp ");
                         break;        
                 case IR_JE:     
-                        printf("JE: ");
+                        sprintf(instr_buf, " je ");
                         break;        
                 case IR_JNE:    
-                        printf("JNE: ");
+                        sprintf(instr_buf, " jne ");
                         break;        
                 case IR_JAE:    
-                        printf("JAE: ");
+                        sprintf(instr_buf, " jae ");
                         break;        
                 case IR_JBE:    
-                        printf("JBE: ");
+                        sprintf(instr_buf, " jbe ");
                         break;        
                 case IR_CMP:    
-                        printf("CMP: ");
+                        sprintf(instr_buf, " cmp ");
                         break;
                 case IR_DEFINE:   
-                        printf("DEFINE: ");
+                        sprintf(instr_buf, " DEFINE: ");
                         break;             
                 case IR_CALL:   
-                        printf("CALL: ");
+                        sprintf(instr_buf, " call ");
                         break;
                 case IR_RET:    
-                        printf("RET: ");
+                        sprintf(instr_buf, " ret ");
                         break;        
                 case IR_PUSH:   
-                        printf("PUSH: ");
+                        sprintf(instr_buf, " push ");
                         break;        
                 case IR_POP:    
-                        printf("POP: ");
+                        sprintf(instr_buf, " pop ");
                         break;                
                 case IR_LABEL:   
-                        printf("LABEL: ");
+                        sprintf(instr_buf, "LABEL: ");
                         break;
                 case IR_SYSCALL:
-                        printf("SYSCALL: ");
+                        sprintf(instr_buf, " syscall ");
                         break;
                 default:
                         printf("extra IR instr\n");
@@ -851,14 +924,16 @@ int DumpInstrName(IR_Instruction instr)
         return 0;
 }
 
-int DumpIR(IR_Function* ir_func)
+int DumpIR(IR_Function* ir_funcs)
 {
         IR_block* ir_instrs = NULL;
         IR_Function* func  = NULL;
 
-        for (size_t func_index = 0; func_index < MAX_FUNC_NUM; func_index++)
+        char instr_buf[BUFFER_SIZE] = {};
+
+        for (size_t func_index = 0; func_index < MAX_FUNC_NUM && ir_funcs[func_index].size != 0; func_index++)
         {
-                func = ir_func + func_index;
+                func = ir_funcs + func_index;
                 printf("\n");
 
                 for (size_t label_index = 0; label_index < func->label_num; label_index++)
@@ -870,7 +945,10 @@ int DumpIR(IR_Function* ir_func)
                 {
                         ir_instrs = func->instrs + instr_index;
                         printf("offset = %lu ;", ir_instrs->offset);
-                        DumpInstrName(ir_instrs->instr);
+
+                        DumpInstrName(ir_instrs->instr, instr_buf);
+                        printf("%s ", instr_buf);
+                        memset(instr_buf, 0, BUFFER_SIZE);
 
                         if (ir_instrs->instr == IR_DEFINE || ir_instrs->instr == IR_CALL)
                         {
@@ -952,72 +1030,3 @@ int DumpIR(IR_Function* ir_func)
 
         return 0;
 }
-
-
-
-
-//-------------------------------------------------------------------------
-// Optimize
-
-// int OptimizeIR(IR_Function* func)
-// {
-//         IR_block* ir_instr_1 = NULL;
-//         IR_block* ir_instr_2 = NULL;
-
-//         for (size_t instr_index = 0; instr_index < func->size; instr_index++)
-//         {
-//                 ir_instr_1 = func->instrs + instr_index;
-//                 ir_instr_2 = func->instrs + instr_index + 1;
-                
-//                 if (ir_instr_1->instr == IR_PUSH && ir_instr_2->instr == IR_POP)
-//                 {
-                        
-
-//                         // InsertIRblock(IR_MOV, /*somewhere*/, ir_instr_1->type_1, ir_instr_1->arg_1.value, ir_instr_1->arg_1.name, ir_instr_2->type_1, ir_instr_1->arg_2.value, ir_instr_2->arg_1.name)
-//                 }
-
-//                 if ((ir_instr_1->instr == IR_MOV) && (ir_instr_1->type_1 == ir_instr_1->type_2) && ((ir_instr_1->arg_2.value == ir_instr_1->arg_1.value)))
-//                 {
-//                         // DeleteIRnode(/*somewhere*/);
-//                 }
-//         }
-
-//         return 0;
-// }
-
-
-
-
-// int FindMostCommonVars(IR_Function* ir_func, int* vars)
-// {
-//         // int occurrence_rate[100] = {};
-
-//         // for (size_t i = 0; i < index_node; i++)
-//         // {
-//         //         if (ir[i].type_1 == VAR_ARG)
-//         //                 occurrence_rate[ir[i].arg_1.value]++;
-
-//         //         if (ir[i].type_2 == VAR_ARG)
-//         //                 occurrence_rate[ir[i].arg_2.value]++;
-//         // }
-
-//         // for (size_t i = 0; i < 10; i++)
-//         // {
-//         //         printf("a[%lu] = %d\n", i, occurrence_rate[i]);
-        
-//         // }
-
-//         // qsort(occurrence_rate, 100, sizeof(int), CompareIntDescending);
-
-
-//         return 0;
-// }
-
-// int CompareIntDescending(const void* a, const void* b)
-// {
-//         return (*(int*)b - *(int*)a);
-// }
-
-
-
-

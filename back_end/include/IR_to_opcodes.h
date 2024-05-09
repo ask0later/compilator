@@ -3,7 +3,6 @@
 
 #include "error_allocator.h"
 #include "AST_to_IR.h"
-#include "AST_to_nasm.h"
 
 
 const int ALIGNMENT = 0x1000;

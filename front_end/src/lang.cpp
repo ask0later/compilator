@@ -295,36 +295,36 @@ int TranslateMorseCode(char* name_var, MorseAlhabet* var, size_t* size_name)
     return 0;
 }
 
-int AAAAAAAAA(Function* func, char* name_var, size_t* id_var)
-{
-    bool match = false;
+// int AAAAAAAAA(Function* func, char* name_var, size_t* id_var)
+// {
+//     bool match = false;
 
-    for (size_t i_var = 0; i_var < func->num_names; i_var++)
-    {
-        if (strncmp(name_var, func->vars[i_var].name, func->vars[i_var].name_size) == 0)
-        {
-            match = true;
-            (*id_var) = func->vars[i_var].id;
-            return 0;
-        }
-    }
+//     for (size_t i_var = 0; i_var < func->num_names; i_var++)
+//     {
+//         if (strncmp(name_var, func->vars[i_var].name, func->vars[i_var].name_size) == 0)
+//         {
+//             match = true;
+//             (*id_var) = func->vars[i_var].id;
+//             return 0;
+//         }
+//     }
 
-    if (match == false)
-    {
-        size_t size_name = strlen(name_var);
+//     if (match == false)
+//     {
+//         size_t size_name = strlen(name_var);
 
-        (*id_var) = func->num_names; //+ func_it->funcs[func_it->size].offset;
+//         (*id_var) = func->num_names; //+ func_it->funcs[func_it->size].offset;
 
-        func->vars[func->num_names].id = (*id_var);
-        func->vars[func->num_names].type = VARIABLE;
-        func->vars[func->num_names].name_size = size_name;
+//         func->vars[func->num_names].id = (*id_var);
+//         func->vars[func->num_names].type = VARIABLE;
+//         func->vars[func->num_names].name_size = size_name;
 
-        memcpy(func->vars[func->num_names].name, name_var, size_name);
-        (func->num_names)++;
-    }
+//         memcpy(func->vars[func->num_names].name, name_var, size_name);
+//         (func->num_names)++;
+//     }
 
-    return 0;
-}
+//     return 0;
+// }
 
 int MatchNamesTable(Function** func, size_t index_func, char* name_var, size_t* id_var)
 {
@@ -348,7 +348,7 @@ int MatchNamesTable(Function** func, size_t index_func, char* name_var, size_t* 
     {
         size_t size_name = strlen(name_var);
 
-        (*id_var) = current->num_names + GetFunctionOffset(func, index_func);
+        (*id_var) = current->num_names; // + GetFunctionOffset(func, index_func);
 
         current->vars[current->num_names].id = (*id_var);
         current->vars[current->num_names].type = VARIABLE;

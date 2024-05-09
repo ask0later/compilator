@@ -8,13 +8,12 @@
 
 #include "AST_to_IR.h"
 #include "IR_to_nasm.h"
-#include "AST_to_nasm.h"
 #include "IR_to_opcodes.h"
 
 const char TEXT_SEGMENT_FILE[] = "../data_and_text/text_segment.txt";
 const char DATA_SEGMENT_FILE[] = "../data_and_text/data_segment.txt";
 
-// ./ir ../examples/tree_factorial.txt nasm_file.asm
+// ./ir ../examples/tree_factorial.txt nasm_file.asm ../asm_hex_dump/dump_factorial.txt
 
 // nasm -f elf64 nasm_file.asm 
 // ld -o test nasm_file.o
@@ -99,7 +98,7 @@ int main(const int argc, const char* argv[])
         return 1;
     }
 
-    DumpIR(funcs);
+    //DumpIR(funcs);
     PrintIRtoNasm(To, funcs);
 
 

@@ -7,12 +7,24 @@
 const size_t MAX_FUNC_NUM  = 10;
 const size_t MAX_NAME_SIZE = 20;
 
+//----------------------------------------------------------
+
 const size_t MAX_NASM_INSTR_SIZE = 30;
 const size_t MAX_x64_INSTR_SIZE = 15;
-
 const size_t MAX_LABEL_NUM = 20;
 
+//----------------------------------------------------------
+
 const size_t MY_INPUT_SIZE = 92;
+
+//----------------------------------------------------------
+
+const size_t MAX_INSTR_NAME_SIZE = 10;
+const size_t MAX_REG_NAME_SIZE = 5;
+
+
+
+
 
 enum IR_Instruction
 {
@@ -80,7 +92,7 @@ struct Label
 
 struct IR_Function
 {
-        IR_block*        instrs;
+        IR_block*       instrs;
         size_t          position;
         size_t          size;
 
@@ -115,23 +127,25 @@ struct IR_to_opcode
 };
 
 
-const char* const registers[] = {"", "rax", "rcx", "rdx", "rbx", "rbp", "rsi", "rdi", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"};
+const char* const registers[] = {"rax", "rcx", "rdx", "rbx", "rsp", "rbp", "rsi", "rdi", "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15"};
 
 IR_to_opcode const table[] =
 {
         {
         IR_MOV,
                 {
-                        {REG_ARG, 1, REG_ARG,  2, {0x48, 0x89, 0xC8}, 3},  // mov rax, rcx
-                        {REG_ARG, 1, REG_ARG,  3, {0x48, 0x89, 0xD0}, 3},  // mov rax, rdx
-                        {REG_ARG, 1, REG_ARG,  8, {0x4C, 0x89, 0xC0}, 3},  // mov rax, r8
-                        {REG_ARG, 1, REG_ARG,  9, {0x4C, 0x89, 0xC8}, 3},  // mov rax, r9
-                        {REG_ARG, 1, REG_ARG, 10, {0x4C, 0x89, 0xD0}, 3},  // mov rax, r10
-                        {REG_ARG, 1, REG_ARG, 11, {0x4C, 0x89, 0xD8}, 3},  // mov rax, r11
-                        {REG_ARG, 1, REG_ARG, 12, {0x4C, 0x89, 0xE0}, 3},  // mov rax, r12
-                        {REG_ARG, 1, REG_ARG, 13, {0x4C, 0x89, 0xE8}, 3},  // mov rax, r13
-                        {REG_ARG, 1, REG_ARG, 14, {0x4C, 0x89, 0xF0}, 3},  // mov rax, r14
-                        {REG_ARG, 1, REG_ARG, 15, {0x4C, 0x89, 0xF8}, 3},  // mov rax, r15
+                        {REG_ARG, 4, REG_ARG, 10, {0x4C, 0x89, 0xD4}, 3},  // mov rsp, r10
+                        {REG_ARG,10, REG_ARG,  4, {0x49, 0x89, 0xE2}, 3},  // mov r10, rsp
+                        {REG_ARG, 0, REG_ARG,  2, {0x48, 0x89, 0xC8}, 3},  // mov rax, rcx
+                        {REG_ARG, 0, REG_ARG,  3, {0x48, 0x89, 0xD0}, 3},  // mov rax, rdx
+                        {REG_ARG, 0, REG_ARG,  8, {0x4C, 0x89, 0xC0}, 3},  // mov rax, r8
+                        {REG_ARG, 0, REG_ARG,  9, {0x4C, 0x89, 0xC8}, 3},  // mov rax, r9
+                        {REG_ARG, 0, REG_ARG, 10, {0x4C, 0x89, 0xD0}, 3},  // mov rax, r10
+                        {REG_ARG, 0, REG_ARG, 11, {0x4C, 0x89, 0xD8}, 3},  // mov rax, r11
+                        {REG_ARG, 0, REG_ARG, 12, {0x4C, 0x89, 0xE0}, 3},  // mov rax, r12
+                        {REG_ARG, 0, REG_ARG, 13, {0x4C, 0x89, 0xE8}, 3},  // mov rax, r13
+                        {REG_ARG, 0, REG_ARG, 14, {0x4C, 0x89, 0xF0}, 3},  // mov rax, r14
+                        {REG_ARG, 0, REG_ARG, 15, {0x4C, 0x89, 0xF8}, 3},  // mov rax, r15
                         {REG_ARG, 10, MEM_ARG, 0, {0x49, 0xBA, 0x00, 0x21, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00}, 10} // mov r10, RAM_PTR 0x402100
                 }
         },
@@ -140,9 +154,9 @@ IR_to_opcode const table[] =
                 {
                         {NUM_ARG, 0, NO_ARG, 0, {0x68, 0xFF, 0xFF, 0xFF, 0xFF}, 5},// push 0x**
 
-                        {REG_ARG, 1, NO_ARG, 0, {0x50}, 1},                        // push rax     
-                        {REG_ARG,  2, NO_ARG, 0, {0x51}, 1},                       // push rcx
-                        {REG_ARG,  3, NO_ARG, 0, {0x52}, 1},                       // push rdx
+                        {REG_ARG, 0, NO_ARG, 0, {0x50}, 1},                        // push rax     
+                        {REG_ARG,  1, NO_ARG, 0, {0x51}, 1},                       // push rcx
+                        {REG_ARG,  2, NO_ARG, 0, {0x52}, 1},                       // push rdx
                         {REG_ARG,  8, NO_ARG, 0, {0x41, 0x50}, 2},                 // push r8
                         {REG_ARG,  9, NO_ARG, 0, {0x41, 0x51}, 2},                 // push r9
                         {REG_ARG, 10, NO_ARG, 0, {0x41, 0x52}, 2},                 // push r10
@@ -158,9 +172,9 @@ IR_to_opcode const table[] =
         {
                 IR_POP,
                 {
-                        {REG_ARG,  1, NO_ARG, 0, {0x58}, 1},                       // pop rax               
-                        {REG_ARG,  2, NO_ARG, 0, {0x59}, 1},                       // pop rcx
-                        {REG_ARG,  3, NO_ARG, 0, {0x5A}, 1},                       // pop rdx
+                        {REG_ARG,  0, NO_ARG, 0, {0x58}, 1},                       // pop rax               
+                        {REG_ARG,  1, NO_ARG, 0, {0x59}, 1},                       // pop rcx
+                        {REG_ARG,  2, NO_ARG, 0, {0x5A}, 1},                       // pop rdx
                         {REG_ARG,  7, NO_ARG, 0, {0x5F}, 1},                       // pop rdi
                         {REG_ARG,  8, NO_ARG, 0, {0x41, 0x58}, 2},                 // pop r8
                         {REG_ARG,  9, NO_ARG, 0, {0x41, 0x59}, 2},                 // pop r9
@@ -178,14 +192,17 @@ IR_to_opcode const table[] =
                 IR_ADD,
                 {
                         {REG_ARG, 11, REG_ARG, 12, {0x4D, 0x01, 0xE3}, 3},                         // add r11, r12
-                        {REG_ARG, 10, NUM_ARG,  0, {0x49, 0x81, 0xC2, 0xFF, 0xFF, 0xFF, 0xFF}, 7}  // add r10, 0x**
+                        {REG_ARG, 10, NUM_ARG,  0, {0x49, 0x81, 0xC2, 0xFF, 0xFF, 0xFF, 0xFF}, 7}, // add r10, 0x**
+                        {REG_ARG,  4, NUM_ARG,  0, {0x48, 0x81, 0xC4, 0xFF, 0xFF, 0xFF, 0xFF}, 7}  // add rsp, 0x**
+
                 }
         },
         {
                 IR_SUB,
                 {
                         {REG_ARG, 11, REG_ARG, 12, {0x4D, 0x29, 0xE3}, 3},                         // sub r11, r12
-                        {REG_ARG, 10, NUM_ARG,  0, {0x49, 0x81, 0xEA, 0xFF, 0xFF, 0xFF, 0xFF}, 7}  // sub r10, 0x**
+                        {REG_ARG, 10, NUM_ARG,  0, {0x49, 0x81, 0xEA, 0x00, 0x00, 0x00, 0x00}, 7}, // sub r10, 0x**
+                        {REG_ARG,  4, NUM_ARG,  0, {0x48, 0x81, 0xEC, 0x00, 0x00, 0x00, 0x00}, 7}  // sub rsp, 0x**
                 }
         },
         {
@@ -298,12 +315,9 @@ int PatchJumps(IR_Function* ir_func, Label* func_labels, size_t func_num, err_al
 size_t GetOffsetConditionalJumps(IR_block* ir_block, IR_Function* ir_func, err_allocator* err_alloc);
 size_t GetOffsetGlobalCalls(IR_block* ir_block, Label* func_labels, size_t func_num, size_t func_offset, err_allocator* err_alloc);
 
-// int OptimizeIR(IR_Function* func);
-// int CompareIntDescending(const void* a, const void* b);
-
 //--------------------------------------------------------------------------
 
-int DumpIR(IR_Function* funcs);
-int DumpInstrName(IR_Instruction instr);
+int DumpIR(IR_Function* ir_funcs);
+int DumpInstrName(IR_Instruction ir_instr, char* instr_buf);
 
 #endif
