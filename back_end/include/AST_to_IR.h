@@ -21,9 +21,7 @@ const size_t MY_INPUT_SIZE = 92;
 
 const size_t MAX_INSTR_NAME_SIZE = 10;
 const size_t MAX_REG_NAME_SIZE = 5;
-
-
-
+const size_t MAX_ARG_NAME_SIZE = 15;
 
 
 enum IR_Instruction
@@ -306,6 +304,7 @@ int InsertOpcode(IR_block* block);
 
 
 int ConvertToHex(int dec_number, unsigned char* hex_number);
+int ConvertHexToBuf(char* hex_buf, unsigned char* hex_number, size_t bytes);
 
 //--------------------------------------------------------------------------
 
@@ -319,5 +318,6 @@ size_t GetOffsetGlobalCalls(IR_block* ir_block, Label* func_labels, size_t func_
 
 int DumpIR(IR_Function* ir_funcs);
 int DumpInstrName(IR_Instruction ir_instr, char* instr_buf);
+int DumpToFile(IR_Function* ir_funcs, const char output_file[], err_allocator* err_alloc);
 
 #endif

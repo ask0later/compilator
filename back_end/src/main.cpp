@@ -20,7 +20,7 @@ const char DATA_SEGMENT_FILE[] = "../data_and_text/data_segment.txt";
 
 int main(const int argc, const char* argv[])
 {
-    if (argc != 3)
+    if (argc != 4)
     {
         printf("lack of arguments\n");
         return 1;
@@ -28,6 +28,7 @@ int main(const int argc, const char* argv[])
     
     const char* tree_file = argv[1];
     const char* nasm_file = argv[2];
+    const char* dump_file = argv[3];
 
     struct err_allocator err_alloc = {};
     CtorErrorAllocator(&err_alloc);
@@ -98,7 +99,7 @@ int main(const int argc, const char* argv[])
         return 1;
     }
 
-    //DumpIR(funcs);
+    DumpToFile(funcs, dump_file, &err_alloc);
     PrintIRtoNasm(To, funcs);
 
 

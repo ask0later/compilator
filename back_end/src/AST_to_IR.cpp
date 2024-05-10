@@ -152,6 +152,30 @@ int ConvertToHex(int dec_number, unsigned char* hex_number)
         return 0;
 }
 
+int ConvertHexToBuf(char* hex_buf, unsigned char* hex_number, size_t bytes)
+{
+        unsigned char symbol_1 = 0, symbol_2 = 0;
+
+        for (size_t byte_index = 0; byte_index < bytes; byte_index++)
+        {
+                symbol_1 = (hex_number[byte_index] & 0xF0);
+                symbol_1 = symbol_1 >> 4;
+                symbol_2 = (hex_number[byte_index] & 0x0F);
+
+                if (symbol_1 < 0x0A)
+                        hex_buf[2 * byte_index] = (char) (symbol_1 + '0');
+                else
+                        hex_buf[2 * byte_index] = (char) (symbol_1 + 'A' - 0x0A);
+
+                if (symbol_2 < 0x0A)
+                        hex_buf[2 * byte_index + 1] = (char) (symbol_2 + '0');
+                else
+                        hex_buf[2 * byte_index + 1] = (char) (symbol_2 + 'A' - 0x0A);
+        }
+
+        return 0;
+}
+
 int PatchIR(IR_Function* ir_funcs, err_allocator* err_alloc)
 {
         Label func_labels[MAX_FUNC_NUM] = {};
@@ -855,67 +879,67 @@ int DumpInstrName(IR_Instruction ir_instr, char* instr_buf)
         switch(ir_instr)
         {
                 case IR_NOP:
-                        sprintf(instr_buf, " nop ");    
+                        sprintf(instr_buf, "nop       ");    
                         break;
                 case IR_MOV:
-                        sprintf(instr_buf, " mov ");    
+                        sprintf(instr_buf, "mov       ");    
                         break;    
                 case IR_ADD:
-                        sprintf(instr_buf, " add ");    
+                        sprintf(instr_buf, "add       ");    
                         break; 
                 case IR_SUB:
-                        sprintf(instr_buf, " sub ");    
+                        sprintf(instr_buf, "sub       ");    
                         break;        
                 case IR_MUL:
-                        sprintf(instr_buf, " mul ");    
+                        sprintf(instr_buf, "mul       ");    
                         break;        
                 case IR_DIV:    
-                        sprintf(instr_buf, " div ");
+                        sprintf(instr_buf, "div       ");
                         break;        
                 case IR_INPUT:  
-                        sprintf(instr_buf, "INPUT: ");
+                        sprintf(instr_buf, "INPUT:       ");
                         break;        
                 case IR_OUTPUT: 
-                        sprintf(instr_buf, "OUTPUT: ");
+                        sprintf(instr_buf, "OUTPUT:       ");
                         break;
                 case IR_JMP:    
-                        sprintf(instr_buf, " jmp ");
+                        sprintf(instr_buf, "jmp       ");
                         break;        
                 case IR_JE:     
-                        sprintf(instr_buf, " je ");
+                        sprintf(instr_buf, "je        ");
                         break;        
                 case IR_JNE:    
-                        sprintf(instr_buf, " jne ");
+                        sprintf(instr_buf, "jne       ");
                         break;        
                 case IR_JAE:    
-                        sprintf(instr_buf, " jae ");
+                        sprintf(instr_buf, "jae       ");
                         break;        
                 case IR_JBE:    
-                        sprintf(instr_buf, " jbe ");
+                        sprintf(instr_buf, "jbe       ");
                         break;        
                 case IR_CMP:    
-                        sprintf(instr_buf, " cmp ");
+                        sprintf(instr_buf, "cmp       ");
                         break;
                 case IR_DEFINE:   
-                        sprintf(instr_buf, " DEFINE: ");
+                        sprintf(instr_buf, "DEFINE:       ");
                         break;             
                 case IR_CALL:   
-                        sprintf(instr_buf, " call ");
+                        sprintf(instr_buf, "call       ");
                         break;
                 case IR_RET:    
-                        sprintf(instr_buf, " ret ");
+                        sprintf(instr_buf, "ret       ");
                         break;        
                 case IR_PUSH:   
-                        sprintf(instr_buf, " push ");
+                        sprintf(instr_buf, "push       ");
                         break;        
                 case IR_POP:    
-                        sprintf(instr_buf, " pop ");
+                        sprintf(instr_buf, "pop       ");
                         break;                
                 case IR_LABEL:   
-                        sprintf(instr_buf, "LABEL: ");
+                        sprintf(instr_buf, "LABEL:       ");
                         break;
                 case IR_SYSCALL:
-                        sprintf(instr_buf, " syscall ");
+                        sprintf(instr_buf, "syscall       ");
                         break;
                 default:
                         printf("extra IR instr\n");
@@ -1027,6 +1051,141 @@ int DumpIR(IR_Function* ir_funcs)
 
                 }
         }
+
+        return 0;
+}
+
+int DumpToFile(IR_Function* ir_funcs, const char output_file[], err_allocator* err_alloc)
+{
+        size_t func_num = 0;
+        for (;func_num < MAX_FUNC_NUM && ir_funcs[func_num].size != 0; func_num++)
+                ;
+
+        IR_Function* last_func = ir_funcs + func_num - 1;
+        Text dump_buf = {};
+        size_t dump_buf_size = 20 * (last_func->offset_from_start + last_func->bytes);
+
+        CtorEmptyBuffer(&dump_buf, dump_buf_size, err_alloc);
+
+        IR_block* ir_instrs = NULL;
+        IR_Function* func  = NULL;
+
+        char temp_buf[BUFFER_SIZE] = {};
+        memset(temp_buf, ' ', BUFFER_SIZE);
+
+        for (size_t func_index = 0; func_index < func_num; func_index++)
+        {
+                func = ir_funcs + func_index;
+
+                for (size_t instr_index = 0; instr_index < func->size; instr_index++)
+                {
+                        ir_instrs = func->instrs + instr_index;
+
+                        memset(temp_buf, ' ', BUFFER_SIZE);                                             
+
+                        if (ir_instrs->instr == IR_DEFINE || ir_instrs->instr == IR_LABEL)
+                        {
+                                sprintf(temp_buf, "\n%s:\n", ir_instrs->arg_1.name);
+                                memcpy(dump_buf.str + dump_buf.position, temp_buf, BUFFER_SIZE);
+                                dump_buf.position += strlen(temp_buf);
+
+                                memset(temp_buf, ' ', BUFFER_SIZE);
+                        }
+
+                        if (ir_instrs->x64_instr_size == 0)
+                                continue;
+                        
+                        ConvertHexToBuf(temp_buf, ir_instrs->x64_instr, ir_instrs->x64_instr_size);
+                        memcpy(dump_buf.str + dump_buf.position, temp_buf, BUFFER_SIZE);  
+                        dump_buf.position += BUFFER_SIZE;
+                        memset(temp_buf, ' ', BUFFER_SIZE);
+
+
+                        DumpInstrName(ir_instrs->instr, temp_buf);
+                        memcpy(dump_buf.str + dump_buf.position, temp_buf, MAX_INSTR_NAME_SIZE);
+                        dump_buf.position += MAX_INSTR_NAME_SIZE;
+                        memset(temp_buf, ' ', MAX_INSTR_NAME_SIZE);
+                        
+
+                        if (ir_instrs->type_1 == NO_ARG)
+                        {
+                                dump_buf.str[dump_buf.position] = '\n';
+                                dump_buf.position++;
+                                continue;
+                        }
+                        else if (ir_instrs->type_1 == NUM_ARG)
+                        {
+                                sprintf(temp_buf, "%d", ir_instrs->arg_1.value);
+                        }
+                        else if (ir_instrs->type_1 == LABEL_ARG)
+                        {
+                                sprintf(temp_buf, "%s", ir_instrs->arg_1.name);
+                        }
+                        else if (ir_instrs->type_1 == REG_ARG)
+                        {
+                                sprintf(temp_buf, "%s", ir_instrs->arg_1.name);
+                        }
+                        else if (ir_instrs->type_1 == MEM_ARG)
+                        {
+                                sprintf(temp_buf, "%s", ir_instrs->arg_1.name);
+                        }
+
+                        size_t arg_size = strlen(temp_buf);
+                        memcpy(dump_buf.str + dump_buf.position, temp_buf, arg_size);
+                        dump_buf.position += arg_size;
+                        memset(temp_buf, ' ', MAX_ARG_NAME_SIZE);
+
+
+                        arg_size = MAX_ARG_NAME_SIZE - (arg_size % MAX_ARG_NAME_SIZE);
+                        memcpy(dump_buf.str + dump_buf.position, temp_buf, arg_size);
+                        dump_buf.position += arg_size;
+                        memset(temp_buf, ' ', arg_size);
+
+                        if (ir_instrs->type_2 == NO_ARG) 
+                        {
+                                dump_buf.str[dump_buf.position] = '\n';
+                                dump_buf.position++;
+                                continue;
+                        }
+
+                        dump_buf.str[dump_buf.position] = ',';
+                        (dump_buf.position)++;
+
+                        dump_buf.str[dump_buf.position] = ' ';
+                        (dump_buf.position)++;
+                        
+                        if (ir_instrs->type_2 == NUM_ARG)
+                        {
+                                sprintf(temp_buf, "%d", ir_instrs->arg_2.value);
+                        }
+                        else if (ir_instrs->type_2 == REG_ARG)
+                        {
+                                sprintf(temp_buf, "%s", ir_instrs->arg_2.name); 
+                        }
+                        else if (ir_instrs->type_2 == MEM_ARG)
+                        {
+                                sprintf(temp_buf, "%s", ir_instrs->arg_2.name);
+                        }
+
+                        arg_size = strlen(temp_buf);
+                        memcpy(dump_buf.str + dump_buf.position, temp_buf, arg_size);
+                        dump_buf.position += arg_size;
+                        memset(temp_buf, ' ', MAX_ARG_NAME_SIZE);
+
+                        arg_size = MAX_ARG_NAME_SIZE - (arg_size % MAX_ARG_NAME_SIZE);
+                        memcpy(dump_buf.str + dump_buf.position, temp_buf, arg_size);
+                        dump_buf.position += arg_size;
+                        memset(temp_buf, ' ', arg_size);
+
+                        dump_buf.str[dump_buf.position] = '\n';
+                        dump_buf.position++;
+                }
+        }
+
+        ReallocateBuffer(&dump_buf, dump_buf.position, err_alloc);
+        WriteFile(&dump_buf, output_file, err_alloc);
+
+        DtorBuffer(&dump_buf);
 
         return 0;
 }

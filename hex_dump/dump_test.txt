@@ -1,0 +1,67 @@
+
+func_1:
+4989E2                        mov       r10            , rsp            
+4981EA08000000                sub       r10            , 8              
+E823010000                    call      my_input       
+50                            push      rax            
+E81D010000                    call      my_input       
+50                            push      rax            
+4152                          push      r10            
+6800000000                    push      0              
+4981EA08000000                sub       r10            , 8              
+41FFB200000000                push      [r10]          
+4981C208000000                add       r10            , 8              
+4981EA00000000                sub       r10            , 0              
+41FFB200000000                push      [r10]          
+4981C200000000                add       r10            , 0              
+4881C418000000                add       rsp            , 24             
+E84E000000                    call      func_0         
+4158                          pop       r8             
+415A                          pop       r10            
+4150                          push      r8             
+4981EA10000000                sub       r10            , 16             
+418F8200000000                pop       [r10]          
+4981C210000000                add       r10            , 16             
+4881EC08000000                sub       rsp            , 8              
+4981EA10000000                sub       r10            , 16             
+41FFB200000000                push      [r10]          
+4981C210000000                add       r10            , 16             
+58                            pop       rax            
+E8FE000000                    call      my_output      
+4C89D4                        mov       rsp            , r10            
+683C000000                    push      60             
+58                            pop       rax            
+6800000000                    push      0              
+5F                            pop       rdi            
+0F05                          syscall   
+
+func_0:
+4989E2                        mov       r10            , rsp            
+4981EA08000000                sub       r10            , 8              
+4881EC08000000                sub       rsp            , 8              
+4881EC08000000                sub       rsp            , 8              
+4981EA08000000                sub       r10            , 8              
+41FFB200000000                push      [r10]          
+4981C208000000                add       r10            , 8              
+4981EA00000000                sub       r10            , 0              
+41FFB200000000                push      [r10]          
+4981C200000000                add       r10            , 0              
+415C                          pop       r12            
+415B                          pop       r11            
+4C89D8                        mov       rax            , r11            
+49F7E4                        mul       r12            
+50                            push      rax            
+4981EA10000000                sub       r10            , 16             
+418F8200000000                pop       [r10]          
+4981C210000000                add       r10            , 16             
+4881EC08000000                sub       rsp            , 8              
+4981EA10000000                sub       r10            , 16             
+41FFB200000000                push      [r10]          
+4981C210000000                add       r10            , 16             
+4158                          pop       r8             
+4C89D4                        mov       rsp            , r10            
+4881C408000000                add       rsp            , 8              
+4159                          pop       r9             
+4150                          push      r8             
+4151                          push      r9             
+C3                            ret       
