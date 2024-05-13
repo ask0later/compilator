@@ -7,6 +7,9 @@
 const size_t MAX_FUNC_NUM  = 10;
 const size_t MAX_NAME_SIZE = 20;
 
+const size_t MAX_IR_BLOCK = 100;
+const size_t BUFFER_SIZE = 30;
+
 //----------------------------------------------------------
 
 const size_t MAX_NASM_INSTR_SIZE = 30;

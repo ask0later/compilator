@@ -2,6 +2,11 @@ handing over to you |..-. .- -.-. -| (|-.|)
 {
     |.- -.-.| encoding matches |-.|;
 
+    reseption if (|-.| match |-----|)
+    {
+        out |.----|;
+    };
+
     reseption while (|-.| diverse |.----|)
     {
         |-.| encoding matches |-.| - |.----|;

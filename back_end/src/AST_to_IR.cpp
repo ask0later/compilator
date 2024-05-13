@@ -8,10 +8,6 @@
 #include <cstring>
 
 
-const size_t MAX_IR_BLOCK = 100;
-const size_t BUFFER_SIZE = 30;
-
-
 int CtorIR(IR_Function** ir_funcs, err_allocator* err_alloc)
 {
         *ir_funcs = (IR_Function*) calloc(MAX_FUNC_NUM, sizeof(IR_Function));

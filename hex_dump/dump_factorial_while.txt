@@ -2,7 +2,7 @@
 func_1:
 4989E2                        mov       r10            , rsp            
 4981EA08000000                sub       r10            , 8              
-E88F010000                    call      my_input       
+E8CE010000                    call      my_input       
 50                            push      rax            
 4152                          push      r10            
 6800000000                    push      0              
@@ -22,7 +22,7 @@ E84E000000                    call      func_0
 41FFB200000000                push      [r10]          
 4981C208000000                add       r10            , 8              
 58                            pop       rax            
-E885010000                    call      my_output      
+E8C4010000                    call      my_output      
 4C89D4                        mov       rsp            , r10            
 683C000000                    push      60             
 58                            pop       rax            
@@ -41,6 +41,24 @@ func_0:
 418F8200000000                pop       [r10]          
 4981C208000000                add       r10            , 8              
 4881EC08000000                sub       rsp            , 8              
+4981EA00000000                sub       r10            , 0              
+41FFB200000000                push      [r10]          
+4981C200000000                add       r10            , 0              
+6800000000                    push      0              
+415B                          pop       r11            
+415C                          pop       r12            
+4D39E3                        cmp       r11            , r12            
+0F8518000000                  jne       .end_if_0      
+6801000000                    push      1              
+4158                          pop       r8             
+4C89D4                        mov       rsp            , r10            
+4881C408000000                add       rsp            , 8              
+4159                          pop       r9             
+4150                          push      r8             
+4151                          push      r9             
+C3                            ret       
+
+.end_if_0:
 
 .while_0:
 4981EA00000000                sub       r10            , 0              

@@ -22,7 +22,6 @@ int main(const int argc, const char* argv[])
 
 
     struct Text buf = {};
-    struct Tree main_tree = {};
 
     CtorBuffer(&buf, lang_file, &err_alloc);
     
@@ -66,7 +65,7 @@ int main(const int argc, const char* argv[])
     CtorFunctions(&funcs, &err_alloc);
     size_t index_func = 0;
 
-    main_tree.root = GetGrammar(&tkns, &funcs, &index_func, &err_alloc);
+    GetGrammar(&tkns, &funcs, &index_func, &err_alloc);
     if (err_alloc.need_call == true)
     {
         INSERT_ERROR_NODE(&err_alloc, "invalid executing GetGrammar");

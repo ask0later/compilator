@@ -100,6 +100,7 @@ int main(const int argc, const char* argv[])
     }
 
     DumpToFile(funcs, dump_file, &err_alloc);
+    //DumpIR(funcs);
     PrintIRtoNasm(To, funcs);
 
 

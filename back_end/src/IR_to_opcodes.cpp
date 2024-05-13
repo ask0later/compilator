@@ -18,6 +18,11 @@ int IRtoOpcode(IR_Function* funcs, Text* code, err_allocator* err_alloc)
         }
 
         AddLib(code, err_alloc);
+        if (err_alloc->need_call == true)
+        {
+                INSERT_ERROR_NODE(err_alloc, "invalid executing AddLib");
+                return 1;
+        }
 
         code->position += (ALIGNMENT - code->position % ALIGNMENT);
 

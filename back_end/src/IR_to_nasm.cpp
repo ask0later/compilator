@@ -8,17 +8,12 @@ int PrintIRtoNasm(FILE* To, IR_Function* funcs)
         fprintf(To, "global _start\n");
         fprintf(To, "_start:\n");
 
-        fprintf(To, "mov r10, RAM_PTR\n");
-
         size_t func_num = 0;
         for (; func_num < MAX_FUNC_NUM && funcs[func_num].size != 0; func_num++)
                 ;
         
-
-        size_t var_num = 0;
         for (size_t func_index = 0; func_index < func_num; func_index++)
         {
-                var_num += funcs[func_index].var_num;
                 PrintIRFunction(To, funcs + func_index);
         }
         
@@ -26,7 +21,6 @@ int PrintIRtoNasm(FILE* To, IR_Function* funcs)
         
         fprintf(To, "section .data\n");
         fprintf(To, "BUF_PTR db 50 dup 0 \n");
-        fprintf(To, "RAM_PTR db 300 dup 0 \n");
 
         return 0;
 }
